@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "YOWOv2"
+version = "0.0.1"
+description = "YOWOv2: A Stronger yet Efficient Multi-level Detection Framework for Real-time Spatio-temporal Action Detection"
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["yowo", "yowo.*"]
+# exclude = ["yowo.evaluator", "yowo.ava_eval.py"]
+# package-data = { "vietocr" = ["**/*.yaml", "../config/*.yml", "../image/*"] }
+
+# [project.scripts]
+# server-run = "src.__main__:main"
