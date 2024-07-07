@@ -79,7 +79,7 @@ model:
     loss_reg_weight: 5
     focal_loss: false
   opt_params:
-    optimizer_type: sgd
+    optimizer_type: adamw
     base_lr: 0.001
     weight_decay: 0.0005
     momentum: 0.9
