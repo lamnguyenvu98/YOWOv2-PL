@@ -95,7 +95,7 @@ ckpt_path: null
 data:
   class_path: yowo.data.UCF24_JHMDB21_DataModule
   init_args:
-    dataset: null
+    dataset: "ucf24"
     data_dir: null
     aug_params:
       jitter: 0.2
