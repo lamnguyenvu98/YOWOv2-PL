@@ -17,7 +17,7 @@ class UCF_JHMDB_Dataset(Dataset):
     def __init__(
         self,
         data_root: str,
-        split_list: str,
+        split_list: Optional[str] = None,
         dataset: str = 'ucf24',
         img_size: int = 224,
         transform: Optional[Any] = None,
@@ -35,6 +35,12 @@ class UCF_JHMDB_Dataset(Dataset):
         self.sampling_rate = sampling_rate
             
         self.split_list = split_list
+        
+        if self.split_list is None:
+            if is_train:
+                self.split_list = "trainlist.txt"
+            else:
+                self.split_list = "testlist.txt"
 
         # load data
         with open(os.path.join(data_root, self.split_list), 'r') as file:
@@ -102,7 +108,7 @@ class UCF_JHMDB_Dataset(Dataset):
 
             video_clip.append(frame)
 
-            frame_id = img_split[1] + '_' +img_split[2] + '_' + img_split[3]
+            frame_id = img_split[1] + '-' +img_split[2] + '-' + img_split[3]
 
         # load an annotation
         if os.path.getsize(label_path):
@@ -154,6 +160,7 @@ class UCF_JHMDB_VIDEO_Dataset(Dataset):
     def __init__(
         self,
         data_root,
+        split_path,
         dataset='ucf24',
         img_size=224,
         transform=None,
@@ -161,6 +168,7 @@ class UCF_JHMDB_VIDEO_Dataset(Dataset):
         sampling_rate=1
         ):
         self.data_root = data_root
+        self.split_path = split_path
         self.dataset = dataset
         self.transform = transform
         
@@ -173,21 +181,27 @@ class UCF_JHMDB_VIDEO_Dataset(Dataset):
         elif dataset == 'jhmdb21':
             self.num_classes = 21
 
-
-    def set_video_data(self, line):
-        self.line = line
-
-        # load a video
-        self.img_folder = os.path.join(self.data_root, 'rgb-images', self.line)
-
+        self.img_folder = os.path.join(self.data_root, self.split_path)
+        
         if self.dataset == 'ucf24':
-            self.label_paths = sorted(glob.glob(os.path.join(self.img_folder, '*.jpg')))
+            self.img_paths = sorted(glob.glob(os.path.join(self.img_folder, '*.jpg')))
         elif self.dataset == 'jhmdb21':
-            self.label_paths = sorted(glob.glob(os.path.join(self.img_folder, '*.png')))
+            self.img_paths = sorted(glob.glob(os.path.join(self.img_folder, '*.png')))
+
+    # def set_video_data(self, line):
+    #     self.line = line
+
+    #     # load a video
+    #     self.img_folder = os.path.join(self.data_root, 'rgb-images', self.line)
+
+    #     if self.dataset == 'ucf24':
+    #         self.label_paths = sorted(glob.glob(os.path.join(self.img_folder, '*.jpg')))
+    #     elif self.dataset == 'jhmdb21':
+    #         self.label_paths = sorted(glob.glob(os.path.join(self.img_folder, '*.png')))
 
 
     def __len__(self):
-        return len(self.label_paths)
+        return len(self.img_paths)
 
 
     def __getitem__(self, index):
@@ -195,9 +209,9 @@ class UCF_JHMDB_VIDEO_Dataset(Dataset):
 
 
     def pull_item(self, index):
-        image_path = self.label_paths[index]
+        image_path = self.img_paths[index]
 
-        video_split = self.line.split('/')
+        video_split = self.split_path.split('/')
         video_class = video_split[0]
         video_file = video_split[1]
         # for windows:
@@ -237,7 +251,6 @@ class UCF_JHMDB_VIDEO_Dataset(Dataset):
         video_clip, _ = self.transform(video_clip, normalize=False)
         # List [T, 3, H, W] -> [3, T, H, W]
         video_clip = torch.stack(video_clip, dim=1)
-        orig_size = [ow, oh]  # width, height
 
         target = {'orig_size': [ow, oh]}
 

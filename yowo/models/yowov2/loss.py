@@ -1,3 +1,4 @@
+from typing import Any, Dict, List
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -33,7 +34,7 @@ class SigmoidFocalLoss(object):
         return loss
 
 
-class Criterion(object):
+class Criterion(nn.Module):
     def __init__(
         self, 
         img_size,
@@ -46,6 +47,7 @@ class Criterion(object):
         num_classes=80, 
         multi_hot=False
     ):
+        super().__init__()
         self.num_classes = num_classes
         self.img_size = img_size
         self.loss_conf_weight = loss_conf_weight
@@ -65,8 +67,14 @@ class Criterion(object):
             topk_candidate=topk_candicate
             )
 
-    def __call__(self, outputs, targets):        
+    def __call__(
+        self, 
+        outputs: Dict[str, List[torch.Tensor] | List[int]], 
+        targets: List[Dict[str, torch.Tensor] | Any]
+    ):        
         """
+            M = height * width aka num of anchors
+            
             outputs['pred_conf']: List(Tensor) [B, M, 1]
             outputs['pred_cls']: List(Tensor) [B, M, C]
             outputs['pred_box']: List(Tensor) [B, M, 4]
@@ -83,7 +91,7 @@ class Criterion(object):
         fpn_strides = outputs['strides']
         anchors = outputs['anchors']
         # preds: [B, M, C]
-        conf_preds = torch.cat(outputs['pred_conf'], dim=1)
+        conf_preds = torch.cat(outputs['pred_conf'], dim=1) # total M across 3 scales
         cls_preds = torch.cat(outputs['pred_cls'], dim=1)
         box_preds = torch.cat(outputs['pred_box'], dim=1)
 

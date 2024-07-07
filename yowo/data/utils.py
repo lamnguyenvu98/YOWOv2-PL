@@ -1,4 +1,68 @@
 import torch
+from scipy.io import loadmat
+import os
+import time
+import numpy as np
+
+__all__ = [
+    "collate_fn",
+    "load_ground_truth_ucf24"
+]
+
+def load_ground_truth_ucf24(
+    data_root: str,
+    gt_file: str = 'splitfiles/finalAnnots.mat',
+    testlist: str = 'splitfiles/testlist01.txt',
+):
+    gt_file = os.path.join(data_root, 'splitfiles/finalAnnots.mat')
+    testlist = os.path.join(data_root, 'splitfiles/testlist01.txt')
+
+    gt_data = loadmat(gt_file)['annot']
+    n_videos = gt_data.shape[1]
+    print('loading gt tubes ...')
+
+    video_testlist = []
+    with open(testlist, 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+            line = line.rstrip()
+            video_testlist.append(line)
+
+    gt_videos = {}
+
+    t1 = time.perf_counter()
+    for i in range(n_videos):
+        video_name = gt_data[0][i][1][0]
+        if video_name not in video_testlist:
+            continue
+        n_tubes = len(gt_data[0][i][2][0])
+        v_annotation = {}
+        all_gt_boxes = []
+        for j in range(n_tubes):  
+            gt_one_tube = [] 
+            tube_start_frame = gt_data[0][i][2][0][j][1][0][0]
+            tube_end_frame = gt_data[0][i][2][0][j][0][0][0]
+            tube_class = gt_data[0][i][2][0][j][2][0][0]
+            tube_data = gt_data[0][i][2][0][j][3]
+            tube_length = tube_end_frame - tube_start_frame + 1
+        
+            for k in range(tube_length):
+                gt_boxes = []
+                gt_boxes.append(int(tube_start_frame.astype(np.uint16)+k))
+                gt_boxes.append(float(tube_data[k][0]))
+                gt_boxes.append(float(tube_data[k][1]))
+                gt_boxes.append(float(tube_data[k][0]) + float(tube_data[k][2]))
+                gt_boxes.append(float(tube_data[k][1]) + float(tube_data[k][3]))
+                gt_one_tube.append(gt_boxes)
+            all_gt_boxes.append(gt_one_tube)
+
+        v_annotation['gt_classes'] = tube_class
+        v_annotation['tubes'] = all_gt_boxes
+        gt_videos[video_name] = v_annotation
+
+    print(time.perf_counter() - t1)
+    print(len(gt_videos))
+    return gt_videos
 
 def collate_fn(batch):
     batch_frame_id = []

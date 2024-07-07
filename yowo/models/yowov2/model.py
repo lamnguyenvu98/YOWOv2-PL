@@ -34,7 +34,8 @@ def aggregate_features(feat_2d: torch.Tensor, feat_3d: torch.Tensor):
 class YOWO(nn.Module):
     def __init__(
         self, 
-        params: YOWOParams, 
+        params: YOWOParams,
+        use_aggregate_feat: bool = False,
         trainable: bool = False
     ):
         super(YOWO, self).__init__()
@@ -47,6 +48,7 @@ class YOWO(nn.Module):
         self.nms_thresh = params.nms_thresh
         self.topk = params.topk
         self.multi_hot = params.multi_hot
+        self.use_aggregate_feat = use_aggregate_feat
 
         # ------------------ Network ---------------------
         ## 2D backbone
@@ -302,26 +304,28 @@ class YOWO(nn.Module):
         all_reg_preds = []
         all_anchors = []
         for level, (cls_feat, reg_feat) in enumerate(zip(cls_feats, reg_feats)):
-            cls_feat_2d_unfold = aggregate_features(
-                feat_2d=cls_feat,
-                feat_3d=feat_3d
-            )
-            reg_feat_2d_unfold = aggregate_features(
-                feat_2d=reg_feat,
-                feat_3d=feat_3d
-            )
-            # upsample
-            # feat_3d_up = F.interpolate(feat_3d, scale_factor=2 ** (2 - level))
-            feat_3d_up = feat_3d
+            if self.use_aggregate_feat:
+                cls_feat_2d_unfold = aggregate_features(
+                    feat_2d=cls_feat,
+                    feat_3d=feat_3d
+                )
+                reg_feat_2d_unfold = aggregate_features(
+                    feat_2d=reg_feat,
+                    feat_3d=feat_3d
+                )
+                
+                cls_feat = self.cls_channel_encoders[level](cls_feat_2d_unfold, feat_3d)
+                reg_feat = self.reg_channel_encoders[level](reg_feat_2d_unfold, feat_3d)
+                
+                cls_feat = F.interpolate(cls_feat, scale_factor=2 ** (2 - level))
+                reg_feat = F.interpolate(reg_feat, scale_factor=2 ** (2 - level))
+            else:
+                # upsample
+                feat_3d_up = F.interpolate(feat_3d, scale_factor=2 ** (2 - level))
 
-            # encoder
-            # cls_feat = self.cls_channel_encoders[level](cls_feat, feat_3d_up)
-            # reg_feat = self.reg_channel_encoders[level](reg_feat, feat_3d_up)
-            cls_feat = self.cls_channel_encoders[level](cls_feat_2d_unfold, feat_3d_up)
-            reg_feat = self.reg_channel_encoders[level](reg_feat_2d_unfold, feat_3d_up)
-
-            cls_feat = F.interpolate(cls_feat, scale_factor=2 ** (2 - level))
-            reg_feat = F.interpolate(reg_feat, scale_factor=2 ** (2 - level))
+                # encoder
+                cls_feat = self.cls_channel_encoders[level](cls_feat, feat_3d_up)
+                reg_feat = self.reg_channel_encoders[level](reg_feat, feat_3d_up)
 
             # head
             cls_feat, reg_feat = self.heads[level](cls_feat, reg_feat)

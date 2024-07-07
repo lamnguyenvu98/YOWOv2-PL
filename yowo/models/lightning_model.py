@@ -3,7 +3,9 @@ from lightning.pytorch import LightningModule
 
 import torch
 import torch.optim as optim
+import numpy as np
 
+from yowo.utils.box_ops import rescale_bboxes
 from .yowov2.model import YOWO
 from .yowov2.loss import build_criterion
 
@@ -53,7 +55,7 @@ class YOWOv2Lightning(LightningModule):
             center_sampling_radius=loss_params.center_sampling_radius,
             topk_candicate=loss_params.topk_candicate
         )
-        
+        self.num_classes = model_params.num_classes
         # self.warmup_scheduler = WarmUpScheduler(
         #     name='linear',
         #     base_lr=self.opt_params.base_lr,
@@ -96,8 +98,35 @@ class YOWOv2Lightning(LightningModule):
         self.log("total loss", losses, prog_bar=True, logger=False)
         return out
     
-    def test_step(self, batch, batch_idx) -> torch.Tensor | Mapping[str, Any] | None:
-        ...
+    # def test_step(self, batch, batch_idx) -> torch.Tensor | Mapping[str, Any] | None:
+    #     batch_img_name, batch_video_clip, batch_target = batch
+    #     batch_scores, batch_labels, batch_bboxes = self.model.inference(batch_video_clip)
+    #     # process batch
+    #     for bi in range(len(batch_scores)):
+    #         img_name = batch_img_name[bi]
+    #         scores = batch_scores[bi]
+    #         labels = batch_labels[bi]
+    #         bboxes = batch_bboxes[bi]
+    #         target = batch_target[bi]
+
+    #         # rescale bbox
+    #         orig_size = target['orig_size']
+    #         bboxes = rescale_bboxes(bboxes, orig_size)
+
+    #         img_annotation = {}
+    #         for cls_idx in range(self.num_classes):
+    #             inds = np.where(labels == cls_idx)[0]
+    #             c_bboxes = bboxes[inds]
+    #             c_scores = scores[inds]
+    #             # [n_box, 5]
+    #             boxes = np.concatenate([c_bboxes, c_scores[..., None]], axis=-1)
+    #             img_annotation[cls_idx + 1] = boxes
+    #         # detected_boxes[img_name] = img_annotation
+    #     return {
+    #         "loss": 0.0,
+    #         "img_name": img_name,
+            
+    #     }
     
     def configure_optimizers(self):
         if self.opt_params.optimizer_type == 'sgd':

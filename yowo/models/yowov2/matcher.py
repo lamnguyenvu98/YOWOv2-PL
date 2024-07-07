@@ -2,8 +2,6 @@ import torch
 import torch.nn.functional as F
 from yowo.utils.box_ops import *
 
-
-
 # SimOTA
 class SimOTA(object):
     def __init__(self, num_classes, center_sampling_radius, topk_candidate):
@@ -124,6 +122,7 @@ class SimOTA(object):
         b_b = gt_bboxes_b - y_centers
         bbox_deltas = torch.stack([b_l, b_t, b_r, b_b], 2)
 
+        # check which anchor points (center x, center y) are inside GTs
         is_in_boxes = bbox_deltas.min(dim=-1).values > 0.0
         is_in_boxes_all = is_in_boxes.sum(dim=0) > 0
         # in fixed center
@@ -135,6 +134,7 @@ class SimOTA(object):
         # [1, M]
         center_radius_ = center_radius * strides.unsqueeze(0)
 
+        # [N, num_anchors, 2]
         gt_bboxes_l = gt_centers[:, 0].unsqueeze(1).repeat(1, num_anchors) - center_radius_ # x1
         gt_bboxes_t = gt_centers[:, 1].unsqueeze(1).repeat(1, num_anchors) - center_radius_ # y1
         gt_bboxes_r = gt_centers[:, 0].unsqueeze(1).repeat(1, num_anchors) + center_radius_ # x2

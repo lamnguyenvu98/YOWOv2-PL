@@ -3,15 +3,18 @@ from lightning.pytorch.utilities.types import (
     TRAIN_DATALOADERS, 
     EVAL_DATALOADERS
 )
+from torch import device
+from torch._C import device
 from torch.utils.data import DataLoader
 import os
 from typing import Dict, Literal, Optional, Any
 from dataclasses import dataclass
 
 from .dataset.ava import AVA_Dataset
-from .dataset.ucf_jhmdb import UCF_JHMDB_Dataset
+from .dataset.ucf_jhmdb import UCF_JHMDB_Dataset, UCF_JHMDB_VIDEO_Dataset
 from .dataset.transforms import Augmentation, BaseTransform
 from .utils import collate_fn
+from yowo.utils.validate import validate_literal_types
 
 @dataclass
 class AugmentationParams:
@@ -20,10 +23,12 @@ class AugmentationParams:
     saturation: float = 1.5
     exposure: float = 1.5
 
+DATASET = Literal['ucf24', 'jhmdb21']
+
 class UCF24_JHMDB21_DataModule(LightningDataModule):
     def __init__(
         self, 
-        dataset: str,
+        dataset: DATASET,
         data_dir: str,
         # transform: Optional[dict] = None,
         aug_params: AugmentationParams,
@@ -45,7 +50,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
         self.collate_fn = collate_fn
     
     def prepare_data(self) -> None:
-        assert self.dataset in ['ucf24', 'jhmdb21'], f"{self.dataset} is not supported. Supported datasets are [ ucf24 , jhmdb21 ]"
+        validate_literal_types(self.dataset, DATASET)
         if not os.path.exists(self.data_dir):
             raise ValueError(
                 f"""Data diretory {self.data_dir} doesn't exist."""
@@ -78,12 +83,12 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
                 img_size=self.img_size
             )
 
-            self.test_set = UCF_JHMDB_Dataset(
+            self.test_set = UCF_JHMDB_VIDEO_Dataset(
                 data_root=self.data_dir,
                 dataset=self.dataset,
                 img_size=self.img_size,
                 transform=self.tfms,
-                is_train=False,
+                # is_train=False,
                 len_clip=self.len_clip,
                 sampling_rate=self.sampling_rate 
             )
@@ -105,8 +110,12 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             collate_fn=self.collate_fn,
             num_workers=os.cpu_count(),
             pin_memory=True,
-            drop_last=True
+            drop_last=False,
+            shuffle=False
         )
+    
+    def transfer_batch_to_device(self, batch: TRAIN_DATALOADERS, device: device, dataloader_idx: int) -> TRAIN_DATALOADERS:
+        return super().transfer_batch_to_device(batch, device, dataloader_idx)
 
 class AVADataModule(LightningDataModule):
     def __init__(
