@@ -147,7 +147,7 @@ class YOWO(nn.Module):
         anchor_xy = torch.stack([anchor_x, anchor_y], dim=-1).float().view(-1, 2) + 0.5
         anchor_xy *= stride
         anchors = anchor_xy.to(device)
-        anchors = anchor_xy
+        # anchors = anchor_xy
 
         return anchors
         
@@ -157,7 +157,6 @@ class YOWO(nn.Module):
             anchors:  (List[Tensor]) [1, M, 2] or [M, 2]
             pred_reg: (List[Tensor]) [B, M, 4] or [B, M, 4]
         """
-        stride = stride.to(anchors.device)
         # center of bbox
         pred_ctr_xy = anchors + pred_reg[..., :2] * stride
         # size of bbox
