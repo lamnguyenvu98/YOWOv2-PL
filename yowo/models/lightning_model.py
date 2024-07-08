@@ -28,12 +28,11 @@ class YOWOv2Lightning(LightningModule):
         trainable: bool = True
     ):
         super().__init__()
-        self.save_hyperparameters(
-            ignore=['trainable']
-        )
+        self.save_hyperparameters()
+        self.trainable = trainable
         self.opt_params = opt_params
         self.scheduler_params = scheduler_params
-        self.model = YOWO(model_params, trainable)
+        self.model = YOWO(model_params, trainable=self.trainable)
         
         if freeze_backbone_2d:
             print('Freeze 2D Backbone ...')

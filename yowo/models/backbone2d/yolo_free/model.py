@@ -28,6 +28,7 @@ class FreeYOLO(nn.Module):
         self.neck = build_neck(
             model_name=self.cfg['neck'],
             expand_ratio=self.cfg['expand_ratio'],
+            pooling_size=self.cfg['pooling_size'],
             neck_act=self.cfg['neck_act'],
             neck_norm=self.cfg['neck_norm'],
             neck_depthwise=self.cfg['neck_depthwise'],

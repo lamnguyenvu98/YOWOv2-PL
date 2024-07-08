@@ -16,7 +16,7 @@ trainer:
         warmup_factor: 0.00066667
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
-        dirpath: /kaggle/working/work_dir
+        dirpath: /home/pep/Projects/DeepLearning/YOWOv2PL/work_dir
         save_last: true
         filename: '{epoch}-{loss:.4f}'
         save_top_k: 1
@@ -77,7 +77,7 @@ model:
     loss_conf_weight: 1
     loss_cls_weight: 1
     loss_reg_weight: 5
-    focal_loss: false
+    focal_loss: true
   opt_params:
     optimizer_type: adamw
     base_lr: 0.001
@@ -90,7 +90,7 @@ model:
     warmup_iter: 500
   freeze_backbone_2d: true
   freeze_backbone_3d: true
-  trainable: false
+  trainable: true
 ckpt_path: null
 data:
   class_path: yowo.data.UCF24_JHMDB21_DataModule

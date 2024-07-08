@@ -190,7 +190,7 @@ class ResNet(nn.Module):
 
 def load_weight(model: nn.Module, arch: RESNET_VERSION):
     print('Loading pretrained weight ...')
-    url = MODEL_URLS_RESNET[arch]
+    url = MODEL_URLS_RESNET.get(arch, None)
     # check
     if url is None:
         print('No pretrained weight for 3D CNN: {}'.format(arch.upper()))

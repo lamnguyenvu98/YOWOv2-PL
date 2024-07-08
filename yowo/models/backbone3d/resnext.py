@@ -169,7 +169,7 @@ class ResNeXt(nn.Module):
 
 def load_weight(model: nn.Module, arch: RESNEXT_VERSION):
     print('Loading pretrained weight ...')
-    url = MODEL_URLS_RESNEXT[arch]
+    url = MODEL_URLS_RESNEXT.get(arch, None)
     # check
     if url is None:
         print('No pretrained weight for 3D CNN: {}'.format(arch.upper()))

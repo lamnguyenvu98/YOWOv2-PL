@@ -22,7 +22,7 @@ class OptimizerParams:
 
 @dataclass
 class SchedulerParams:
-    lr_epoch: tuple[int] # = field(default_factory=(2, 3, 4))
+    lr_epoch: List[int] # = field(default_factory=(2, 3, 4))
     lr_decay_ratio: float = 0.5
     warmup: bool = True
     warmup_iter: int = 500

@@ -64,7 +64,7 @@ class WarmupLR(Callback):
             )
 
     def on_train_epoch_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
-        opt, _ = pl_module.optimizers()
+        opt = pl_module.optimizers()
         if pl_module.global_step < self.max_iteration:
             self.warmup_scheduler.warmup(
                 iter=pl_module.global_step,

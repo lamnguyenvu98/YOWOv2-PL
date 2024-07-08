@@ -165,7 +165,7 @@ class ShuffleNetV2(nn.Module):
 
 def load_weight(model: nn.Module, arch: SHUFFLENETV2_VERSION):
     print('Loading pretrained weight ...')
-    url = MODEL_URLS_SHUFFLENETV2[arch]
+    url = MODEL_URLS_SHUFFLENETV2.get(arch, None)
     # check
     if url is None:
         print('No pretrained weight for 3D CNN: {}'.format(arch.upper()))

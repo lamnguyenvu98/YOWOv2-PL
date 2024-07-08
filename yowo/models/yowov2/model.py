@@ -416,77 +416,79 @@ class YOWO(nn.Module):
                 'anchors':   (Tensor) [M, 2]
                 'stride':    (Int)
             }
-        """                        
+        """                      
         if not self.trainable:
             return self.inference(video_clips)
-        else:
-            # key frame
-            key_frame = video_clips[:, :, -1, :, :]
-            # 3D backbone
-            feat_3d = self.backbone_3d(video_clips)
 
-            # 2D backbone
-            cls_feats, reg_feats = self.backbone_2d(key_frame)
+        # key frame
+        key_frame = video_clips[:, :, -1, :, :]
+        # 3D backbone
+        feat_3d = self.backbone_3d(video_clips)
 
-            # non-shared heads
-            all_conf_preds = []
-            all_cls_preds = []
-            all_box_preds = []
-            all_anchors = []
-            for level, (cls_feat, reg_feat) in enumerate(zip(cls_feats, reg_feats)):
+        # 2D backbone
+        cls_feats, reg_feats = self.backbone_2d(key_frame)
+
+        # non-shared heads
+        all_conf_preds = []
+        all_cls_preds = []
+        all_box_preds = []
+        all_anchors = []
+        for level, (cls_feat, reg_feat) in enumerate(zip(cls_feats, reg_feats)):
+            if self.use_aggregate_feat:
                 cls_feat_2d_unfold = aggregate_features(
                     feat_2d=cls_feat,
                     feat_3d=feat_3d
                 )
                 reg_feat_2d_unfold = aggregate_features(
-                    feat_2d=cls_feat,
+                    feat_2d=reg_feat,
                     feat_3d=feat_3d
                 )
-                # upsample
-                # feat_3d_up = F.interpolate(feat_3d, scale_factor=2 ** (2 - level))
-                feat_3d_up = feat_3d
-
-                # encoder
-                # cls_feat = self.cls_channel_encoders[level](cls_feat, feat_3d_up)
-                # reg_feat = self.reg_channel_encoders[level](reg_feat, feat_3d_up)
-                cls_feat = self.cls_channel_encoders[level](cls_feat_2d_unfold, feat_3d_up)
-                reg_feat = self.reg_channel_encoders[level](reg_feat_2d_unfold, feat_3d_up)
+                
+                cls_feat = self.cls_channel_encoders[level](cls_feat_2d_unfold, feat_3d)
+                reg_feat = self.reg_channel_encoders[level](reg_feat_2d_unfold, feat_3d)
                 
                 cls_feat = F.interpolate(cls_feat, scale_factor=2 ** (2 - level))
                 reg_feat = F.interpolate(reg_feat, scale_factor=2 ** (2 - level))
+            else:
+                # upsample
+                feat_3d_up = F.interpolate(feat_3d, scale_factor=2 ** (2 - level))
 
-                # head
-                cls_feat, reg_feat = self.heads[level](cls_feat, reg_feat)
+                # encoder
+                cls_feat = self.cls_channel_encoders[level](cls_feat, feat_3d_up)
+                reg_feat = self.reg_channel_encoders[level](reg_feat, feat_3d_up)
 
-                # pred
-                conf_pred = self.conf_preds[level](reg_feat)
-                cls_pred = self.cls_preds[level](cls_feat)
-                reg_pred = self.reg_preds[level](reg_feat)
+            # head
+            cls_feat, reg_feat = self.heads[level](cls_feat, reg_feat)
+
+            # pred
+            conf_pred = self.conf_preds[level](reg_feat)
+            cls_pred = self.cls_preds[level](cls_feat)
+            reg_pred = self.reg_preds[level](reg_feat)
+    
+            # generate anchors
+            fmp_size = conf_pred.shape[-2:]
+            anchors = self.generate_anchors(fmp_size, self.stride[level])
+
+            # [B, C, H, W] -> [B, H, W, C] -> [B, M, C]
+            conf_pred = conf_pred.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
+            cls_pred = cls_pred.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
+            reg_pred = reg_pred.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
+
+            # decode box: [M, 4]
+            box_pred = self.decode_boxes(anchors, reg_pred, self.stride[level])
+
+            all_conf_preds.append(conf_pred)
+            all_cls_preds.append(cls_pred)
+            all_box_preds.append(box_pred)
+            all_anchors.append(anchors)
         
-                # generate anchors
-                fmp_size = conf_pred.shape[-2:]
-                anchors = self.generate_anchors(fmp_size, self.stride[level])
+        # output dict
+        outputs = {
+            "pred_conf": all_conf_preds,       # List(Tensor) [B, M, 1]
+            "pred_cls": all_cls_preds,         # List(Tensor) [B, M, C]
+            "pred_box": all_box_preds,         # List(Tensor) [B, M, 4]
+            "anchors": all_anchors,            # List(Tensor) [B, M, 2]
+            "strides": self.stride             # List(Int)
+        }            
 
-                # [B, C, H, W] -> [B, H, W, C] -> [B, M, C]
-                conf_pred = conf_pred.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
-                cls_pred = cls_pred.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
-                reg_pred = reg_pred.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
-
-                # decode box: [M, 4]
-                box_pred = self.decode_boxes(anchors, reg_pred, self.stride[level])
-
-                all_conf_preds.append(conf_pred)
-                all_cls_preds.append(cls_pred)
-                all_box_preds.append(box_pred)
-                all_anchors.append(anchors)
-            
-            # output dict
-            outputs = {
-                "pred_conf": all_conf_preds,       # List(Tensor) [B, M, 1]
-                "pred_cls": all_cls_preds,         # List(Tensor) [B, M, C]
-                "pred_box": all_box_preds,         # List(Tensor) [B, M, 4]
-                "anchors": all_anchors,            # List(Tensor) [B, M, 2]
-                "strides": self.stride             # List(Int)
-            }            
-
-            return outputs
+        return outputs
