@@ -7,7 +7,7 @@ MODEL_URLS = {
 YOLO_FREE_CONFIG = {
     'yolo_free_nano': {
         # model
-        'backbone': 'shufflenetv2_1.0x',
+        'backbone': 'shufflenet_v2_x1_0',
         'pretrained': True,
         'stride': [8, 16, 32],  # P3, P4, P5
         'anchor_size': None,
