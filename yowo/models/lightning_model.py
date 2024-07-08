@@ -61,8 +61,8 @@ class YOWOv2Lightning(LightningModule):
         #     wp_iter=self.scheduler_params.warmup_iter,
         # )
 
-    def forward(self, video_clip):
-        return self.model(video_clip)
+    def forward(self, video_clip, infer_mode = True):
+        return self.model.inference(video_clip) if infer_mode else self.model(video_clip)
 
     def training_step(self, batch, batch_idx) -> torch.Tensor | Mapping[str, Any] | None:
         frame_ids, video_clips, targets = batch
@@ -81,8 +81,9 @@ class YOWOv2Lightning(LightningModule):
         #             lr=self.opt_params.base_lr,
         #             base_lr=self.opt_params.base_lr
         #         )
-        
-        outputs = self.forward(video_clips)
+        opt = self.optimizers()
+        lr = opt.param_groups[0]['lr']
+        outputs = self.forward(video_clips, infer_mode=False)
         loss_dict = self.criterion(outputs, targets)
         losses = loss_dict['losses']
         loss_unscale = losses * self.trainer.accumulate_grad_batches
@@ -91,10 +92,11 @@ class YOWOv2Lightning(LightningModule):
             'loss_unscale': loss_unscale,
             'loss_dict': loss_dict
         }
-        self.log("loss_conf", loss_dict["loss_conf"], prog_bar=True, logger=False)
-        self.log("loss_cls", loss_dict["loss_cls"], prog_bar=True, logger=False)
-        self.log("loss_box", loss_dict["loss_box"], prog_bar=True, logger=False)
-        self.log("total loss", losses, prog_bar=True, logger=False)
+        self.log("lr", lr, prog_bar=True, logger=True, sync_dist=False)
+        self.log("loss_conf", loss_dict["loss_conf"], prog_bar=True, logger=True, sync_dist=True)
+        self.log("loss_cls", loss_dict["loss_cls"], prog_bar=True, logger=True, sync_dist=True)
+        self.log("loss_box", loss_dict["loss_box"], prog_bar=True, logger=True, sync_dist=True)
+        self.log("total_loss", losses, prog_bar=True, logger=True, sync_dist=True)
         return out
     
     # def test_step(self, batch, batch_idx) -> torch.Tensor | Mapping[str, Any] | None:

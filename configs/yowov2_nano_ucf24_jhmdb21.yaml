@@ -16,9 +16,10 @@ trainer:
         warmup_factor: 0.00066667
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
+        monitor: total_loss
         dirpath: /kaggle/working/work_dir
         save_last: true
-        filename: '{epoch}-{loss:.4f}'
+        filename: '{epoch}-{total_loss:.4f}'
         save_top_k: 1
   fast_dev_run: false
   max_epochs: 8
