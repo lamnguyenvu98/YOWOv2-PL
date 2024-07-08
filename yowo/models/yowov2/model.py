@@ -136,7 +136,7 @@ class YOWO(nn.Module):
             cls_pred.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
 
 
-    def generate_anchors(self, fmp_size, stride):
+    def generate_anchors(self, fmp_size, stride, device):
         """
             fmp_size: (List) [H, W]
         """
@@ -146,7 +146,7 @@ class YOWO(nn.Module):
         # [H, W, 2] -> [HW, 2]
         anchor_xy = torch.stack([anchor_x, anchor_y], dim=-1).float().view(-1, 2) + 0.5
         anchor_xy *= stride
-        # anchors = anchor_xy.to(self.device)
+        anchors = anchor_xy.to(device)
         anchors = anchor_xy
 
         return anchors
@@ -331,13 +331,13 @@ class YOWO(nn.Module):
             cls_feat, reg_feat = self.heads[level](cls_feat, reg_feat)
 
             # pred
-            conf_pred = self.conf_preds[level](reg_feat)
+            conf_pred: torch.Tensor = self.conf_preds[level](reg_feat)
             cls_pred = self.cls_preds[level](cls_feat)
             reg_pred = self.reg_preds[level](reg_feat)
         
             # generate anchors
             fmp_size = conf_pred.shape[-2:]
-            anchors = self.generate_anchors(fmp_size, self.stride[level])
+            anchors = self.generate_anchors(fmp_size, self.stride[level], conf_pred.device)
 
             # [B, C, H, W] -> [B, H, W, C] -> [B, M, C], M = HW
             conf_pred = conf_pred.permute(0, 2, 3, 1).contiguous().view(B, -1, 1)
@@ -467,7 +467,7 @@ class YOWO(nn.Module):
     
             # generate anchors
             fmp_size = conf_pred.shape[-2:]
-            anchors = self.generate_anchors(fmp_size, self.stride[level])
+            anchors = self.generate_anchors(fmp_size, self.stride[level], conf_pred.device)
 
             # [B, C, H, W] -> [B, H, W, C] -> [B, M, C]
             conf_pred = conf_pred.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
