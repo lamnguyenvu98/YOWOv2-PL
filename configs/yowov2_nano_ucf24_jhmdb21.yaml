@@ -16,7 +16,7 @@ trainer:
         warmup_factor: 0.00066667
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
-        dirpath: /home/pep/Projects/DeepLearning/YOWOv2PL/work_dir
+        dirpath: /kaggle/working/work_dir
         save_last: true
         filename: '{epoch}-{loss:.4f}'
         save_top_k: 1
