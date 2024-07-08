@@ -72,7 +72,7 @@ class WarmupLR(Callback):
                 optimizer=opt
             )
         else:
-            pl_module.log("Warmup is over - ", pl_module.global_step, prog_bar=True, logger=False)
+            # pl_module.log("Warmup is over - ", pl_module.global_step, prog_bar=True, logger=False)
             self.warmup_scheduler.set_lr(
                 optimizer=opt,
                 lr=self.base_lr,
