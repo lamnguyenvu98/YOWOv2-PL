@@ -74,11 +74,12 @@ class YOWOv2Lightning(LightningModule):
             'loss_unscale': loss_unscale,
             'loss_dict': loss_dict
         }
-        self.log("lr", lr, prog_bar=True, logger=True, sync_dist=False)
-        self.log("total_loss", losses, prog_bar=True, logger=True, sync_dist=True)
-        self.log("loss_conf", loss_dict["loss_conf"], prog_bar=True, logger=True, sync_dist=True)
-        self.log("loss_cls", loss_dict["loss_cls"], prog_bar=True, logger=True, sync_dist=True)
-        self.log("loss_box", loss_dict["loss_box"], prog_bar=True, logger=True, sync_dist=True)
+        if self.trainer.is_global_zero:
+            self.log("lr", lr, prog_bar=True, logger=True, rank_zero_only=True)
+            self.log("total_loss", losses, prog_bar=True, logger=True, rank_zero_only=True)
+            self.log("loss_conf", loss_dict["loss_conf"], prog_bar=True, logger=True, rank_zero_only=True)
+            self.log("loss_cls", loss_dict["loss_cls"], prog_bar=True, logger=True, rank_zero_only=True)
+            self.log("loss_box", loss_dict["loss_box"], prog_bar=True, logger=True, rank_zero_only=True)
         return out
         
     # def test_step(self, batch, batch_idx) -> torch.Tensor | Mapping[str, Any] | None:
