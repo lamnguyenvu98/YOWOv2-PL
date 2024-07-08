@@ -1,3 +1,4 @@
+from typing import Any
 from lightning import LightningModule, Trainer
 from lightning.pytorch.callbacks import Callback
 
@@ -25,7 +26,7 @@ class WarmUpScheduler(object):
 
     def warmup(self, iter, optimizer):
         # warmup
-        assert iter < self.wp_iter
+        # assert iter < self.wp_iter
         if self.name == 'exp':
             tmp_lr = self.base_lr * pow(iter / self.wp_iter, 4)
             self.set_lr(optimizer, tmp_lr, self.base_lr)
@@ -63,7 +64,7 @@ class WarmupLR(Callback):
                 warmup_factor=self.warmup_factor
             )
 
-    def on_train_epoch_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
+    def on_train_batch_start(self, trainer: Trainer, pl_module: LightningModule, batch: Any, batch_idx: int) -> None:
         opt = pl_module.optimizers()
         if pl_module.global_step < self.max_iteration:
             self.warmup_scheduler.warmup(
