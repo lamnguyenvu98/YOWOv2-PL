@@ -28,11 +28,9 @@ class YOWOv2Lightning(LightningModule):
         trainable: bool = True
     ):
         super().__init__()
+        self.num_classes = model_params.num_classes
         self.save_hyperparameters()
-        self.trainable = trainable
-        self.opt_params = opt_params
-        self.scheduler_params = scheduler_params
-        self.model = YOWO(model_params, trainable=self.trainable)
+        self.model = YOWO(model_params, trainable=trainable)
         
         if freeze_backbone_2d:
             print('Freeze 2D Backbone ...')
@@ -54,7 +52,6 @@ class YOWOv2Lightning(LightningModule):
             center_sampling_radius=loss_params.center_sampling_radius,
             topk_candicate=loss_params.topk_candicate
         )
-        self.num_classes = model_params.num_classes
         # self.warmup_scheduler = WarmUpScheduler(
         #     name='linear',
         #     base_lr=self.opt_params.base_lr,
@@ -66,21 +63,6 @@ class YOWOv2Lightning(LightningModule):
 
     def training_step(self, batch, batch_idx) -> torch.Tensor | Mapping[str, Any] | None:
         frame_ids, video_clips, targets = batch
-        # if self.warmup:
-        #     opt, _ = self.optimizers()
-        #     if self.global_step < self.scheduler_params.warmup_iter:
-        #         self.warmup_scheduler.warmup(
-        #             iter=self.global_step,
-        #             optimizer=opt
-        #         )
-        #     else:
-        #         self.log("Warmup is over - ", self.global_step, prog_bar=True, logger=False)
-        #         self.warmup = False
-        #         self.warmup_scheduler.set_lr(
-        #             optimizer=opt,
-        #             lr=self.opt_params.base_lr,
-        #             base_lr=self.opt_params.base_lr
-        #         )
         opt = self.optimizers()
         lr = opt.param_groups[0]['lr']
         outputs = self.forward(video_clips, infer_mode=False)
@@ -93,12 +75,12 @@ class YOWOv2Lightning(LightningModule):
             'loss_dict': loss_dict
         }
         self.log("lr", lr, prog_bar=True, logger=True, sync_dist=False)
+        self.log("total_loss", losses, prog_bar=True, logger=True, sync_dist=True)
         self.log("loss_conf", loss_dict["loss_conf"], prog_bar=True, logger=True, sync_dist=True)
         self.log("loss_cls", loss_dict["loss_cls"], prog_bar=True, logger=True, sync_dist=True)
         self.log("loss_box", loss_dict["loss_box"], prog_bar=True, logger=True, sync_dist=True)
-        self.log("total_loss", losses, prog_bar=True, logger=True, sync_dist=True)
         return out
-    
+        
     # def test_step(self, batch, batch_idx) -> torch.Tensor | Mapping[str, Any] | None:
     #     batch_img_name, batch_video_clip, batch_target = batch
     #     batch_scores, batch_labels, batch_bboxes = self.model.inference(batch_video_clip)
@@ -130,29 +112,28 @@ class YOWOv2Lightning(LightningModule):
     #     }
     
     def configure_optimizers(self):
-        if self.opt_params.optimizer_type == 'sgd':
+        if self.hparams["opt_params"]["optimizer_type"] == 'sgd':
             optimizer = optim.SGD(
                 self.model.parameters(), 
-                lr=self.opt_params.base_lr,
-                momentum=self.opt_params.momentum,
-                weight_decay=self.opt_params.weight_decay)
+                lr=self.hparams["opt_params"]["base_lr"],
+                momentum=self.hparams["opt_params"]["momentum"],
+                weight_decay=self.hparams["opt_params"]["weight_decay"])
 
-        elif self.opt_params.optimizer_type == 'adam':
+        elif self.hparams["opt_params"]["optimizer_type"] == 'adam':
             optimizer = optim.Adam(
                 self.model.parameters(), 
-                lr=self.opt_params.base_lr,
-                weight_decay=self.opt_params.weight_decay)
+                lr=self.hparams["opt_params"]["base_lr"],
+                weight_decay=self.hparams["opt_params"]["weight_decay"])
                                     
         else:
             optimizer = optim.AdamW(
                 self.model.parameters(), 
-                lr=self.opt_params.base_lr,
-                weight_decay=self.opt_params.weight_decay)
+                lr=self.hparams["opt_params"]["base_lr"],
+                weight_decay=self.hparams["opt_params"]["weight_decay"])
         
         lr_scheduler = optim.lr_scheduler.MultiStepLR(
             optimizer, 
-            self.scheduler_params.lr_epoch, 
-            self.scheduler_params.lr_decay_ratio
-        )
-        
+            self.hparams["scheduler_params"]["lr_epoch"], 
+            self.hparams["scheduler_params"]["lr_decay_ratio"]
+        )        
         return [optimizer], [lr_scheduler]

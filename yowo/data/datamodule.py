@@ -102,7 +102,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             pin_memory=True,
             drop_last=True
         )
-        
+    
     def test_dataloader(self) -> EVAL_DATALOADERS:
         return DataLoader(
             dataset=self.test_set,
