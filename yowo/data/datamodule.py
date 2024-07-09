@@ -7,7 +7,7 @@ from torch import device
 from torch._C import device
 from torch.utils.data import DataLoader
 import os
-from typing import Dict, Literal, Optional, Any
+from typing import Union, Literal, Optional, Any
 from dataclasses import dataclass
 
 from .dataset.ava import AVA_Dataset
@@ -32,6 +32,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
         data_dir: str,
         aug_params: AugmentationParams,
         split_file: Optional[str] = None,
+        num_workers: Union[Literal["auto"], int] = 0,
         # transform: Optional[dict] = None,
         img_size: int = 224,
         len_clip: int = 16,
@@ -44,6 +45,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
         self.data_dir = data_dir
         self.aug_params = aug_params
         self.split_file = split_file
+        self.num_workers = os.cpu_count() if num_workers == "auto" else num_workers
         # self.transform = transform
         self.img_size = img_size
         self.len_clip = len_clip
@@ -102,7 +104,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             dataset=self.train_set,
             batch_size=self.batch_size,
             collate_fn=self.collate_fn,
-            num_workers=os.cpu_count(),
+            num_workers=self.num_workers,
             pin_memory=True,
             drop_last=True
         )
@@ -112,7 +114,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             dataset=self.test_set,
             batch_size=self.batch_size,
             collate_fn=self.collate_fn,
-            num_workers=os.cpu_count(),
+            num_workers=self.num_workers,
             pin_memory=True,
             drop_last=False,
             shuffle=False
