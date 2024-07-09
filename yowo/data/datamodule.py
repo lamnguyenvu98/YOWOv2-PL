@@ -38,8 +38,24 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
         len_clip: int = 16,
         sampling_rate: int = 1,
         batch_size: int = 8,
-        collate_fn: Optional[Any] = None
+        collate_fn: Optional[Any] = None,
+        **kwargs
     ):
+        """Lightning datamodule
+
+        Args:
+            dataset (DATASET): type of dataset. "ucf24" or "jhmdb21"
+            data_dir (str): path to dataset directory
+            aug_params (AugmentationParams): argumentation parameters
+            split_file (Optional[str], optional): text file that split train and test. Defaults to None.
+            num_workers (Union[Literal["auto"], int], optional): number of workers for Dataloader. Defaults to 0.
+            img_size (int, optional): size of input data. Defaults to 224.
+            len_clip (int, optional): number of sequence of frames for input data. Defaults to 16.
+            sampling_rate (int, optional): sampling rate to create sequence of frames. Defaults to 1.
+            batch_size (int, optional): batch size. Defaults to 8.
+            collate_fn (Optional[Any], optional): collate function for Dataloader. Defaults to None.
+            **kwargs: extra arguments for torch.utils.data.Dataloader
+        """
         super().__init__()
         self.dataset = dataset
         self.data_dir = data_dir
@@ -52,6 +68,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
         self.sampling_rate = sampling_rate
         self.batch_size = batch_size
         self.collate_fn = collate_fn
+        self.kwarg = kwargs
     
     def prepare_data(self) -> None:
         validate_literal_types(self.dataset, DATASET)
@@ -106,7 +123,8 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             collate_fn=self.collate_fn,
             num_workers=self.num_workers,
             pin_memory=True,
-            drop_last=True
+            drop_last=True,
+            **self.kwarg
         )
     
     def test_dataloader(self) -> EVAL_DATALOADERS:
@@ -117,7 +135,8 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             num_workers=self.num_workers,
             pin_memory=True,
             drop_last=False,
-            shuffle=False
+            shuffle=False,
+            **self.kwarg
         )
     
     def transfer_batch_to_device(self, batch: TRAIN_DATALOADERS, device: device, dataloader_idx: int) -> TRAIN_DATALOADERS:
