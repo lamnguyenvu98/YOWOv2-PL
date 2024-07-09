@@ -63,24 +63,30 @@ class YOWOv2Lightning(LightningModule):
 
     def training_step(self, batch, batch_idx) -> torch.Tensor | Mapping[str, Any] | None:
         frame_ids, video_clips, targets = batch
+        batch_size = video_clips.size(0)
         opt = self.optimizers()
         lr = opt.param_groups[0]['lr']
         outputs = self.forward(video_clips, infer_mode=False)
         loss_dict = self.criterion(outputs, targets)
-        losses = loss_dict['losses']
-        loss_unscale = losses * self.trainer.accumulate_grad_batches
-        out = {
-            'loss': losses,
-            'loss_unscale': loss_unscale,
-            'loss_dict': loss_dict
+        total_loss = loss_dict['losses']
+        # loss_unscale = losses * self.trainer.accumulate_grad_batches
+        out_log = {
+            "lr": lr,
+            "total_loss": total_loss,
+            "loss_conf": loss_dict["loss_conf"],
+            "loss_cls": loss_dict["loss_cls"],
+            "loss_box": loss_dict["loss_box"]
         }
-        if self.trainer.is_global_zero:
-            self.log("lr", lr, prog_bar=True, logger=True, rank_zero_only=True)
-            self.log("total_loss", losses, prog_bar=True, logger=True, rank_zero_only=True)
-            self.log("loss_conf", loss_dict["loss_conf"], prog_bar=True, logger=True, rank_zero_only=True)
-            self.log("loss_cls", loss_dict["loss_cls"], prog_bar=True, logger=True, rank_zero_only=True)
-            self.log("loss_box", loss_dict["loss_box"], prog_bar=True, logger=True, rank_zero_only=True)
-        return out
+        self.log_dict(
+            dictionary=out_log, 
+            prog_bar=True, 
+            logger=True,
+            on_step=True,
+            on_epoch=True,
+            sync_dist=True,
+            batch_size=batch_size
+        )
+        return total_loss
         
     # def test_step(self, batch, batch_idx) -> torch.Tensor | Mapping[str, Any] | None:
     #     batch_img_name, batch_video_clip, batch_target = batch
