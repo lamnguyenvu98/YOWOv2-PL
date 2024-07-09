@@ -52,11 +52,6 @@ class YOWOv2Lightning(LightningModule):
             center_sampling_radius=loss_params.center_sampling_radius,
             topk_candicate=loss_params.topk_candicate
         )
-        # self.warmup_scheduler = WarmUpScheduler(
-        #     name='linear',
-        #     base_lr=self.opt_params.base_lr,
-        #     wp_iter=self.scheduler_params.warmup_iter,
-        # )
 
     def forward(self, video_clip, infer_mode = True):
         return self.model.inference(video_clip) if infer_mode else self.model(video_clip)
@@ -77,20 +72,25 @@ class YOWOv2Lightning(LightningModule):
             "loss_cls": loss_dict["loss_cls"],
             "loss_box": loss_dict["loss_box"]
         }
+        if self.trainer.num_devices > 1:
+            sync_dist = True
+        else:
+            sync_dist = False
+            
         self.log_dict(
             dictionary=out_log, 
             prog_bar=True, 
             logger=True,
             on_step=True,
             on_epoch=True,
-            sync_dist=True,
+            sync_dist=sync_dist,
             batch_size=batch_size
         )
         return total_loss
         
     # def test_step(self, batch, batch_idx) -> torch.Tensor | Mapping[str, Any] | None:
     #     batch_img_name, batch_video_clip, batch_target = batch
-    #     batch_scores, batch_labels, batch_bboxes = self.model.inference(batch_video_clip)
+    #     batch_scores, batch_labels, batch_bboxes = self.forward(batch_video_clip, infer_mode=True)
     #     # process batch
     #     for bi in range(len(batch_scores)):
     #         img_name = batch_img_name[bi]
@@ -104,19 +104,7 @@ class YOWOv2Lightning(LightningModule):
     #         bboxes = rescale_bboxes(bboxes, orig_size)
 
     #         img_annotation = {}
-    #         for cls_idx in range(self.num_classes):
-    #             inds = np.where(labels == cls_idx)[0]
-    #             c_bboxes = bboxes[inds]
-    #             c_scores = scores[inds]
-    #             # [n_box, 5]
-    #             boxes = np.concatenate([c_bboxes, c_scores[..., None]], axis=-1)
-    #             img_annotation[cls_idx + 1] = boxes
-    #         # detected_boxes[img_name] = img_annotation
-    #     return {
-    #         "loss": 0.0,
-    #         "img_name": img_name,
             
-    #     }
     
     def configure_optimizers(self):
         if self.hparams["opt_params"]["optimizer_type"] == 'sgd':
