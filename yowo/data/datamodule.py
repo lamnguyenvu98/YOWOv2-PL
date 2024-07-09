@@ -39,7 +39,6 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
         sampling_rate: int = 1,
         batch_size: int = 8,
         collate_fn: Optional[Any] = None,
-        **kwargs
     ):
         """Lightning datamodule
 
@@ -68,7 +67,6 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
         self.sampling_rate = sampling_rate
         self.batch_size = batch_size
         self.collate_fn = collate_fn
-        self.kwarg = kwargs
     
     def prepare_data(self) -> None:
         validate_literal_types(self.dataset, DATASET)
@@ -125,7 +123,6 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             pin_memory=True,
             drop_last=True,
             shuffle=True,
-            **self.kwarg
         )
     
     def test_dataloader(self) -> EVAL_DATALOADERS:
@@ -137,7 +134,6 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             pin_memory=True,
             drop_last=False,
             shuffle=False,
-            **self.kwarg
         )
     
     def transfer_batch_to_device(self, batch: TRAIN_DATALOADERS, device: device, dataloader_idx: int) -> TRAIN_DATALOADERS:
