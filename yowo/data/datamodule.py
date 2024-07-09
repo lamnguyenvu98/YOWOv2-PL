@@ -124,6 +124,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             num_workers=self.num_workers,
             pin_memory=True,
             drop_last=True,
+            shuffle=True,
             **self.kwarg
         )
     
