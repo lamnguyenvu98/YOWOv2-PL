@@ -91,11 +91,13 @@ data:
   init_args:
     dataset: "ucf24"
     data_dir: null
+    split_file: null
     aug_params:
       jitter: 0.2
       hue: 0.1
       saturation: 1.5
       exposure: 1.5
+    num_workers: auto
     img_size: 224
     len_clip: 16
     sampling_rate: 1
