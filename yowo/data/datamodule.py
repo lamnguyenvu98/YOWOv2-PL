@@ -30,8 +30,9 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
         self, 
         dataset: DATASET,
         data_dir: str,
-        # transform: Optional[dict] = None,
         aug_params: AugmentationParams,
+        split_file: Optional[str] = None,
+        # transform: Optional[dict] = None,
         img_size: int = 224,
         len_clip: int = 16,
         sampling_rate: int = 1,
@@ -42,6 +43,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
         self.dataset = dataset
         self.data_dir = data_dir
         self.aug_params = aug_params
+        self.split_file = split_file
         # self.transform = transform
         self.img_size = img_size
         self.len_clip = len_clip
@@ -71,6 +73,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             self.train_set = UCF_JHMDB_Dataset(
                 data_root=self.data_dir,
                 dataset=self.dataset,
+                split_list=self.split_file,
                 img_size=self.img_size,
                 transform=self.tfms,
                 is_train=True,
@@ -86,6 +89,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             self.test_set = UCF_JHMDB_VIDEO_Dataset(
                 data_root=self.data_dir,
                 dataset=self.dataset,
+                split_path=self.split_file,
                 img_size=self.img_size,
                 transform=self.tfms,
                 # is_train=False,
