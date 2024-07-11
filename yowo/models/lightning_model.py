@@ -137,7 +137,10 @@ class YOWOv2Lightning(LightningModule):
         
         if self.warmup_config:
             schedulers.append({
-                'scheduler': WarmupLRScheduler(optimizer, **asdict(self.warmup_config)),
+                'scheduler': WarmupLRScheduler(
+                    optimizer, 
+                    **asdict(self.warmup_config)
+                ),
                 'interval': 'step',
                 'frequency': 1
             })
