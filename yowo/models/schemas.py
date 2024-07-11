@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
-from typing import List
+from dataclasses import dataclass
+from typing import List, Literal
 import torch
 
 from .types import OPTIMIZER
@@ -22,13 +22,19 @@ class OptimizerParams:
 
 @dataclass
 class SchedulerParams:
-    lr_epoch: List[int] # = field(default_factory=(2, 3, 4))
+    lr_epoch: List[int]
     lr_decay_ratio: float = 0.5
     warmup: bool = True
     warmup_iter: int = 500
 
 @dataclass
-class YOWOParams:
+class WarmupLRConfig:
+    name: Literal["linear", "exp"] = "linear"
+    max_iter: int = 500
+    factor: float = 0.00066667
+
+@dataclass
+class ModelConfig:
     backbone_2d: str
     backbone_3d: str
     pretrained_2d: bool
@@ -38,7 +44,7 @@ class YOWOParams:
     head_act: str
     head_depthwise: bool
     num_classes: int
-    stride: List[int] # = field(default_factory=[8, 16, 32])
+    stride: List[int]
     img_size: int = 224
     conf_thresh: float = 0.05
     nms_thresh: float = 0.6
@@ -46,5 +52,4 @@ class YOWOParams:
     multi_hot: bool = False
     num_cls_heads: int = 2
     num_reg_heads: int = 2
-    # device: str = "cuda" if torch.cuda.is_available() else "cpu"
     
