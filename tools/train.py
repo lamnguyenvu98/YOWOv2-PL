@@ -1,5 +1,5 @@
-from lightning.pytorch.cli import LightningCLI
 
+from lightning.pytorch.cli import LightningCLI
 from yowo.data import *
 from yowo.models import YOWOv2Lightning
 
