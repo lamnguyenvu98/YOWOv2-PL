@@ -10,7 +10,7 @@ from .encoder import build_channel_encoder
 from .head import build_head
 
 from yowo.utils.nms import multiclass_nms
-from ..schemas import YOWOParams
+from ..schemas import ModelConfig
 
 def aggregate_features(feat_2d: torch.Tensor, feat_3d: torch.Tensor):
     spatial_size_3d = feat_3d.size(-1)
@@ -34,7 +34,7 @@ def aggregate_features(feat_2d: torch.Tensor, feat_3d: torch.Tensor):
 class YOWO(nn.Module):
     def __init__(
         self, 
-        params: YOWOParams,
+        params: ModelConfig,
         use_aggregate_feat: bool = False,
         trainable: bool = False
     ):
