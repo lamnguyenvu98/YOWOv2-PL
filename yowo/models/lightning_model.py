@@ -1,36 +1,54 @@
-from typing import Any, Mapping
+from dataclasses import asdict
+from typing import Any, Dict, Mapping, Optional
 from lightning.pytorch import LightningModule
+from lightning.pytorch.cli import OptimizerCallable, LRSchedulerCallable
 
 import torch
 import torch.optim as optim
-import numpy as np
 
 from yowo.utils.box_ops import rescale_bboxes
+from yowo.schedulers import WarmupLRScheduler
 from .yowov2.model import YOWO
 from .yowov2.loss import build_criterion
 
 from .schemas import (
     LossParams,
-    OptimizerParams,
-    SchedulerParams,
-    YOWOParams
+    ModelConfig,
+    WarmupLRConfig
 )
+
+DEFAULT_OPTIMIZER = lambda p: optim.AdamW(p, lr=0.001, weight_decay=5e-4)
+DEFAULT_SCHEDULER = lambda opt: optim.lr_scheduler.MultiStepLR(
+    optimizer=opt,
+    milestones=[2, 4, 5],
+    gamma=0.5
+)
+DEFAULT_SCHEDULER_CONFIG = {
+    'interval': 'step',
+    'frequency': 1
+}
 
 class YOWOv2Lightning(LightningModule):
     def __init__(
         self,
-        model_params: YOWOParams,
+        model_config: ModelConfig,
         loss_params: LossParams,
-        opt_params: OptimizerParams,
-        scheduler_params: SchedulerParams,
+        scheduler: LRSchedulerCallable = DEFAULT_SCHEDULER,
+        scheduler_config: Dict = DEFAULT_SCHEDULER_CONFIG,
+        optimizer: OptimizerCallable = DEFAULT_OPTIMIZER,
         freeze_backbone_2d: bool = True,
         freeze_backbone_3d: bool = True,
+        warmup_config: Optional[WarmupLRConfig] = None,
         trainable: bool = True
     ):
         super().__init__()
-        self.num_classes = model_params.num_classes
         self.save_hyperparameters()
-        self.model = YOWO(model_params, trainable=trainable)
+        self.optimizer = optimizer
+        self.scheduler = scheduler
+        self.scheduler_config = scheduler_config
+        self.warmup_config = warmup_config
+        self.num_classes = model_config.num_classes
+        self.model = YOWO(model_config, trainable=trainable)
         
         if freeze_backbone_2d:
             print('Freeze 2D Backbone ...')
@@ -42,9 +60,9 @@ class YOWOv2Lightning(LightningModule):
                 m.requires_grad = False
         
         self.criterion = build_criterion(
-            img_size=model_params.img_size,
-            num_classes=model_params.num_classes,
-            multi_hot=model_params.multi_hot,
+            img_size=model_config.img_size,
+            num_classes=model_config.num_classes,
+            multi_hot=model_config.multi_hot,
             loss_cls_weight=loss_params.loss_cls_weight,
             loss_reg_weight=loss_params.loss_reg_weight,
             loss_conf_weight=loss_params.loss_conf_weight,
@@ -107,28 +125,21 @@ class YOWOv2Lightning(LightningModule):
             
     
     def configure_optimizers(self):
-        if self.hparams["opt_params"]["optimizer_type"] == 'sgd':
-            optimizer = optim.SGD(
-                self.model.parameters(), 
-                lr=self.hparams["opt_params"]["base_lr"],
-                momentum=self.hparams["opt_params"]["momentum"],
-                weight_decay=self.hparams["opt_params"]["weight_decay"])
+        optimizer = self.optimizer(self.model.parameters())
 
-        elif self.hparams["opt_params"]["optimizer_type"] == 'adam':
-            optimizer = optim.Adam(
-                self.model.parameters(), 
-                lr=self.hparams["opt_params"]["base_lr"],
-                weight_decay=self.hparams["opt_params"]["weight_decay"])
-                                    
-        else:
-            optimizer = optim.AdamW(
-                self.model.parameters(), 
-                lr=self.hparams["opt_params"]["base_lr"],
-                weight_decay=self.hparams["opt_params"]["weight_decay"])
         
-        lr_scheduler = optim.lr_scheduler.MultiStepLR(
-            optimizer, 
-            self.hparams["scheduler_params"]["lr_epoch"], 
-            self.hparams["scheduler_params"]["lr_decay_ratio"]
-        )        
-        return [optimizer], [lr_scheduler]
+        lr_scheduler = self.scheduler(optimizer)
+        
+        schedulers = [{
+            'scheduler': lr_scheduler,
+            **self.scheduler_config
+        }]
+        
+        if self.warmup_config:
+            schedulers.append({
+                'scheduler': WarmupLRScheduler(optimizer, **asdict(self.warmup_config)),
+                'interval': 'step',
+                'frequency': 1
+            })
+        
+        return [optimizer], schedulers
