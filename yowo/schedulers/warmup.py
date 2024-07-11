@@ -3,6 +3,7 @@ import warnings
 from lightning import LightningModule, Trainer
 from lightning.pytorch.callbacks import Callback
 
+import torch
 from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 
@@ -18,12 +19,16 @@ class WarmupLRScheduler(LRScheduler):
         max_iter: int = 500, 
         factor: float = 0.00066667,
         last_epoch: int = -1,
-        verbose: str = "deprecated"
+        verbose: Literal['deprecated'] = "deprecated"
     ):
         validate_literal_types(name, WARMUP_TYPE)
         self.name = name
         self.max_iter = max_iter
         self.factor = factor
+        # check verison
+        torch_version = torch.__version__
+        if torch_version <= '2.1.2':
+            verbose = False
         super().__init__(optimizer, last_epoch, verbose)
     
     def get_last_lr(self) -> List[float]:
