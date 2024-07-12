@@ -89,7 +89,6 @@ model:
       - 5
       gamma: 0.1
       last_epoch: -1
-      verbose: deprecated
   scheduler_config:
     interval: epoch
     frequency: 1
