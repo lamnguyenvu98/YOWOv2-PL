@@ -1,11 +1,10 @@
 from typing import List, Literal
 import warnings
 
-import torch
 from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 
-from yowo.utils.validate import validate_literal_types, deprecated_verbose_scheduler
+from yowo.utils.validate import validate_literal_types
 
 WARMUP_TYPE = Literal["exp", "linear"]
 
@@ -16,15 +15,13 @@ class WarmupLRScheduler(LRScheduler):
         name: WARMUP_TYPE = 'linear', 
         max_iter: int = 500, 
         factor: float = 0.00066667,
-        last_epoch: int = -1,
-        verbose: str = "deprecated"
+        last_epoch: int = -1
     ):
         validate_literal_types(name, WARMUP_TYPE)
         self.name = name
         self.max_iter = max_iter
         self.factor = factor
-        verbose = deprecated_verbose_scheduler(verbose)
-        super().__init__(optimizer, last_epoch, verbose)
+        super().__init__(optimizer, last_epoch)
     
     def get_last_lr(self) -> List[float]:
         return super().get_last_lr()

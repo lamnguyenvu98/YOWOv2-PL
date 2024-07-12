@@ -7,7 +7,7 @@ from torch import device
 from torch._C import device
 from torch.utils.data import DataLoader
 import os
-from typing import Union, Literal, Optional, Any
+from typing import Callable, Iterable, Union, Literal, Optional, Any
 from dataclasses import dataclass
 
 from .dataset.ava import AVA_Dataset
@@ -23,6 +23,11 @@ class AugmentationParams:
     saturation: float = 1.5
     exposure: float = 1.5
 
+DEFAULT_SPLIT_FILE = dict(
+    train="trainlist.txt",
+    test="testlist.txt"
+)
+
 DATASET = Literal['ucf24', 'jhmdb21']
 
 class UCF24_JHMDB21_DataModule(LightningDataModule):
@@ -31,29 +36,27 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
         dataset: DATASET,
         data_dir: str,
         aug_params: AugmentationParams,
-        split_file: Optional[str] = None,
-        num_workers: Union[Literal["auto"], int] = 0,
-        # transform: Optional[dict] = None,
+        collate_fn: Callable[[Iterable], Any],
+        split_file: dict = DEFAULT_SPLIT_FILE,
+        num_workers: Union[Literal["auto"], int] = "auto",
         img_size: int = 224,
         len_clip: int = 16,
         sampling_rate: int = 1,
         batch_size: int = 8,
-        collate_fn: Optional[Any] = None,
     ):
-        """Lightning datamodule
+        """Lightning Data Module for UCF24 and JHMDB21 dataset
 
         Args:
             dataset (DATASET): type of dataset. "ucf24" or "jhmdb21"
             data_dir (str): path to dataset directory
             aug_params (AugmentationParams): argumentation parameters
-            split_file (Optional[str], optional): text file that split train and test. Defaults to None.
+            split_file (Optional[SplitFile], optional): a dataclass that contain 2 field "train" and "test", each is a split file for train/test. Defaults to None.
             num_workers (Union[Literal["auto"], int], optional): number of workers for Dataloader. Defaults to 0.
             img_size (int, optional): size of input data. Defaults to 224.
             len_clip (int, optional): number of sequence of frames for input data. Defaults to 16.
             sampling_rate (int, optional): sampling rate to create sequence of frames. Defaults to 1.
             batch_size (int, optional): batch size. Defaults to 8.
             collate_fn (Optional[Any], optional): collate function for Dataloader. Defaults to None.
-            **kwargs: extra arguments for torch.utils.data.Dataloader
         """
         super().__init__()
         self.dataset = dataset
@@ -76,8 +79,8 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             )
 
     def setup(self, stage: Literal['fit', 'validate', 'test', 'predict']) -> None:
-        if self.collate_fn is None:
-            self.collate_fn = collate_fn
+        # if self.collate_fn is None:
+        #     self.collate_fn = collate_fn
         
         if stage == "fit":
             self.tfms = Augmentation(
@@ -90,7 +93,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             self.train_set = UCF_JHMDB_Dataset(
                 data_root=self.data_dir,
                 dataset=self.dataset,
-                split_list=self.split_file,
+                split_list=self.split_file.get("train", None),
                 img_size=self.img_size,
                 transform=self.tfms,
                 is_train=True,
@@ -103,13 +106,13 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
                 img_size=self.img_size
             )
 
-            self.test_set = UCF_JHMDB_VIDEO_Dataset(
+            self.test_set = UCF_JHMDB_Dataset(
                 data_root=self.data_dir,
                 dataset=self.dataset,
-                split_path=self.split_file,
+                split_path=self.split_file.get("test", None),
                 img_size=self.img_size,
                 transform=self.tfms,
-                # is_train=False,
+                is_train=False,
                 len_clip=self.len_clip,
                 sampling_rate=self.sampling_rate 
             )

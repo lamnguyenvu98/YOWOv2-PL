@@ -17,28 +17,24 @@ from .schemas import (
     WarmupLRConfig
 )
 
-DEFAULT_OPTIMIZER = lambda p: optim.AdamW(p, lr=0.001, weight_decay=5e-4)
-DEFAULT_SCHEDULER = lambda opt: optim.lr_scheduler.MultiStepLR(
-    optimizer=opt,
-    milestones=[2, 4, 5],
-    gamma=0.5
-)
 DEFAULT_SCHEDULER_CONFIG = {
-    'interval': 'step',
+    'interval': 'epoch',
     'frequency': 1
 }
+
+DEFAULT_WARMUP = WarmupLRConfig()
 
 class YOWOv2Lightning(LightningModule):
     def __init__(
         self,
         model_config: ModelConfig,
         loss_params: LossParams,
-        scheduler: LRSchedulerCallable,
-        scheduler_config: Dict,
         optimizer: OptimizerCallable,
+        scheduler: LRSchedulerCallable,
+        scheduler_config: Dict = DEFAULT_SCHEDULER_CONFIG,
         freeze_backbone_2d: bool = True,
         freeze_backbone_3d: bool = True,
-        warmup_config: Optional[WarmupLRConfig] = None,
+        warmup_config: Optional[WarmupLRConfig] = DEFAULT_WARMUP,
         trainable: bool = True
     ):
         super().__init__()

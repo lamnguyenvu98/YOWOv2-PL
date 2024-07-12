@@ -18,5 +18,5 @@ include = ["yowo", "yowo.*"]
 # exclude = ["yowo.evaluator", "yowo.ava_eval.py"]
 # package-data = { "vietocr" = ["**/*.yaml", "../config/*.yml", "../image/*"] }
 
-# [project.scripts]
-# server-run = "src.__main__:main"
+[project.scripts]
+yowo = "yowo.cli:main"
