@@ -9,7 +9,7 @@ trainer:
   logger: null
   callbacks: null
   fast_dev_run: false
-  max_epochs: 8
+  max_epochs: null
   min_epochs: null
   max_steps: -1
   min_steps: null
@@ -52,7 +52,6 @@ model:
     head_depthwise: true
     num_classes: 24
     stride: [8, 16, 32]
-    img_size: 224
     conf_thresh: 0.05
     nms_thresh: 0.6
     topk: 50
@@ -66,15 +65,6 @@ model:
     loss_cls_weight: 1
     loss_reg_weight: 5
     focal_loss: false
-  scheduler:
-    class_path: torch.optim.lr_scheduler.MultiStepLR
-    init_args:
-      milestones: [2, 4, 5]
-      gamma: 0.1
-      last_epoch: -1
-  scheduler_config:
-    interval: epoch
-    frequency: 1
   optimizer:
     class_path: torch.optim.AdamW
     init_args:
@@ -83,13 +73,26 @@ model:
       - 0.9
       - 0.999
       eps: 1.0e-08
-      weight_decay: 5e-4
+      weight_decay: 0.0005
       amsgrad: false
       maximize: false
       foreach: null
       capturable: false
       differentiable: false
       fused: null
+  scheduler:
+    class_path: torch.optim.lr_scheduler.MultiStepLR
+    init_args:
+      milestones:
+      - 2
+      - 4
+      - 5
+      gamma: 0.1
+      last_epoch: -1
+      verbose: deprecated
+  scheduler_config:
+    interval: epoch
+    frequency: 1
   freeze_backbone_2d: true
   freeze_backbone_3d: true
   warmup_config:
@@ -101,17 +104,19 @@ ckpt_path: null
 data:
   class_path: yowo.data.UCF24_JHMDB21_DataModule
   init_args:
-    dataset: "ucf24"
-    data_dir: "/home/pep/Datasets/ucf24/"
+    dataset: ucf24
+    data_dir: null
     aug_params:
       jitter: 0.2
       hue: 0.1
       saturation: 1.5
       exposure: 1.5
-    split_file: null
-    num_workers: "auto"
+    collate_fn: yowo.data.utils.collate_fn
+    split_file:
+      train: trainlist.txt
+      test: testlist.txt
+    num_workers: auto
     img_size: 224
     len_clip: 16
     sampling_rate: 1
     batch_size: 8
-    collate_fn: null
