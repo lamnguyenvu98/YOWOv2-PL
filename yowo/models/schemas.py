@@ -5,7 +5,7 @@ import torch
 from .types import OPTIMIZER
 
 @dataclass
-class LossParams:
+class LossConfig:
     topk_candicate: int = 10
     center_sampling_radius: float = 2.5
     loss_conf_weight: float | int = 1
