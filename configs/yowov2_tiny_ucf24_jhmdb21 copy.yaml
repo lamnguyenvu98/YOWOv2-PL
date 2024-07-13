@@ -9,7 +9,7 @@ trainer:
   logger: null
   callbacks: null
   fast_dev_run: false
-  max_epochs: null
+  max_epochs: 8
   min_epochs: null
   max_steps: -1
   min_steps: null
@@ -42,14 +42,14 @@ trainer:
   default_root_dir: null
 model:
   model_config:
-    backbone_2d: "yolo_free_nano"
-    backbone_3d: "shufflenet_v2_x1_0"
+    backbone_2d: "yolo_free_tiny"
+    backbone_3d: "shufflenet_v2_x2_0"
     pretrained_2d: true
     pretrained_3d: true
     head_dim: 64
-    head_norm: "BN"
-    head_act: "lrelu"
-    head_depthwise: true
+    head_norm: "BN" # or GN (Group Norm)
+    head_act: "lrelu" # relu, silu, mish
+    head_depthwise: false
     num_classes: 24
     stride: [8, 16, 32]
     conf_thresh: 0.05
@@ -58,7 +58,7 @@ model:
     multi_hot: false
     num_cls_heads: 2
     num_reg_heads: 2
-  loss_params:
+  loss_config:
     topk_candicate: 10
     center_sampling_radius: 2.5
     loss_conf_weight: 1
@@ -98,13 +98,13 @@ model:
     name: linear
     max_iter: 500
     factor: 0.00066667
-  trainable: true
-ckpt_path: null
+  trainable: false
+ckpt_path: /home/pep/Projects/DeepLearning/YOWOv2PL/checkpoints/last-e5.ckpt
 data:
   class_path: yowo.data.UCF24_JHMDB21_DataModule
   init_args:
     dataset: ucf24
-    data_dir: null
+    data_dir: /home/pep/Datasets/ucf24
     aug_params:
       jitter: 0.2
       hue: 0.1
@@ -118,4 +118,4 @@ data:
     img_size: 224
     len_clip: 16
     sampling_rate: 1
-    batch_size: 8
+    batch_size: 1
