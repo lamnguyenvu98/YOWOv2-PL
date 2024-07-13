@@ -1,5 +1,3 @@
-from typing import List
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,7 +7,7 @@ from yowo.models.backbone3d import build_backbone_3d
 from .encoder import build_channel_encoder
 from .head import build_head
 
-from yowo.utils.nms import multiclass_nms
+from yowo.utils.nms import multiclass_nms_tensor
 from ..schemas import ModelConfig
 
 def aggregate_features(feat_2d: torch.Tensor, feat_3d: torch.Tensor):
@@ -39,8 +37,6 @@ class YOWO(nn.Module):
         trainable: bool = False
     ):
         super(YOWO, self).__init__()
-        # self.cfg = cfg
-        # self.device = torch.device(params.device)
         self.stride = params.stride
         self.num_classes = params.num_classes
         self.trainable = trainable
@@ -169,7 +165,7 @@ class YOWO(nn.Module):
         return pred_box
 
 
-    def post_process_one_hot(self, conf_preds, cls_preds, reg_preds, anchors):
+    def post_process_one_hot(self, conf_preds, cls_preds, reg_preds, anchors) -> tuple[torch.Tensor]:
         """
         Input:
             conf_preds: (Tensor) [H x W, 1]
@@ -216,18 +212,18 @@ class YOWO(nn.Module):
         bboxes = torch.cat(all_bboxes)
 
         # to cpu
-        scores = scores.cpu().numpy()
-        labels = labels.cpu().numpy()
-        bboxes = bboxes.cpu().numpy()
+        # scores = scores.cpu().numpy()
+        # labels = labels.cpu().numpy()
+        # bboxes = bboxes.cpu().numpy()
 
         # nms
-        scores, labels, bboxes = multiclass_nms(
+        scores, labels, bboxes = multiclass_nms_tensor(
             scores, labels, bboxes, self.nms_thresh, self.num_classes, False)
 
         return scores, labels, bboxes
     
 
-    def post_process_multi_hot(self, conf_preds, cls_preds, reg_preds, anchors):
+    def post_process_multi_hot(self, conf_preds, cls_preds, reg_preds, anchors) -> tuple[torch.Tensor]:
         """
         Input:
             cls_pred: (Tensor) [H x W, C]
@@ -267,22 +263,32 @@ class YOWO(nn.Module):
         box_preds = torch.cat(all_box_preds, dim=0)    # [M, 4]
 
         # to cpu
-        scores = conf_preds.cpu().numpy()
-        labels = cls_preds.cpu().numpy()
-        bboxes = box_preds.cpu().numpy()
+        # scores = conf_preds.cpu().numpy()
+        # labels = cls_preds.cpu().numpy()
+        # bboxes = box_preds.cpu().numpy()
 
         # nms
-        scores, labels, bboxes = multiclass_nms(
-            scores, labels, bboxes, self.nms_thresh, self.num_classes, True)
+        # scores, labels, bboxes = multiclass_nms(
+        #     conf_preds, cls_preds, box_preds, self.nms_thresh, self.num_classes, True)
 
+        scores, labels, bboxes = multiclass_nms_tensor(
+            scores=conf_preds,
+            labels=cls_preds,
+            bboxes=box_preds,
+            nms_thresh=self.nms_thresh,
+            num_classes=self.num_classes,
+            class_agnostic=True
+        )
+        
         # [M, 5 + C]
-        out_boxes = np.concatenate([bboxes, scores[..., None], labels], axis=-1)
+        # out_boxes = np.concatenate([bboxes, scores[..., None], labels], axis=-1)
+        out_boxes = torch.cat([bboxes, scores.unsqueeze(-1), labels], dim=-1)
 
         return out_boxes
     
 
     @torch.no_grad()
-    def inference(self, video_clips):
+    def inference(self, video_clips: torch.Tensor) -> tuple[list[torch.Tensor]]:
         """
         Input:
             video_clips: (Tensor) -> [B, 3, T, H, W].
@@ -332,8 +338,8 @@ class YOWO(nn.Module):
 
             # pred
             conf_pred: torch.Tensor = self.conf_preds[level](reg_feat)
-            cls_pred = self.cls_preds[level](cls_feat)
-            reg_pred = self.reg_preds[level](reg_feat)
+            cls_pred: torch.Tensor = self.cls_preds[level](cls_feat)
+            reg_pred: torch.Tensor = self.reg_preds[level](reg_feat)
         
             # generate anchors
             fmp_size = conf_pred.shape[-2:]
@@ -368,7 +374,7 @@ class YOWO(nn.Module):
 
                 # normalize bbox
                 out_boxes[..., :4] /= max(img_h, img_w)
-                out_boxes[..., :4] = out_boxes[..., :4].clip(0., 1.)
+                out_boxes[..., :4] = out_boxes[..., :4].clamp(0., 1.)
 
                 batch_bboxes.append(out_boxes)
 
@@ -395,7 +401,7 @@ class YOWO(nn.Module):
 
                 # normalize bbox
                 bboxes /= max(img_h, img_w)
-                bboxes = bboxes.clip(0., 1.)
+                bboxes = bboxes.clamp(0., 1.)
 
                 batch_scores.append(scores)
                 batch_labels.append(labels)
@@ -404,7 +410,7 @@ class YOWO(nn.Module):
             return batch_scores, batch_labels, batch_bboxes
 
 
-    def forward(self, video_clips):
+    def forward(self, video_clips: torch.Tensor) -> dict[str, torch.Tensor]:
         """
         Input:
             video_clips: (Tensor) -> [B, 3, T, H, W].
@@ -417,8 +423,8 @@ class YOWO(nn.Module):
                 'stride':    (Int)
             }
         """                      
-        if not self.trainable:
-            return self.inference(video_clips)
+        # if not self.trainable:
+        #     return self.inference(video_clips)
 
         # key frame
         key_frame = video_clips[:, :, -1, :, :]
@@ -461,9 +467,9 @@ class YOWO(nn.Module):
             cls_feat, reg_feat = self.heads[level](cls_feat, reg_feat)
 
             # pred
-            conf_pred = self.conf_preds[level](reg_feat)
-            cls_pred = self.cls_preds[level](cls_feat)
-            reg_pred = self.reg_preds[level](reg_feat)
+            conf_pred: torch.Tensor = self.conf_preds[level](reg_feat)
+            cls_pred: torch.Tensor = self.cls_preds[level](cls_feat)
+            reg_pred: torch.Tensor = self.reg_preds[level](reg_feat)
     
             # generate anchors
             fmp_size = conf_pred.shape[-2:]
