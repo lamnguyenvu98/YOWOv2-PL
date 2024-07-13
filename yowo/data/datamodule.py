@@ -36,7 +36,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
         dataset: DATASET,
         data_dir: str,
         aug_params: AugmentationParams,
-        collate_fn: Callable[[Iterable], Any],
+        collate_fn: Optional[Callable[[Iterable], Any]] = None,
         split_file: dict = DEFAULT_SPLIT_FILE,
         num_workers: Union[Literal["auto"], int] = "auto",
         img_size: int = 224,
@@ -79,8 +79,8 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             )
 
     def setup(self, stage: Literal['fit', 'validate', 'test', 'predict']) -> None:
-        # if self.collate_fn is None:
-        #     self.collate_fn = collate_fn
+        if self.collate_fn is None:
+            self.collate_fn = collate_fn
         
         if stage == "fit":
             self.tfms = Augmentation(
@@ -109,7 +109,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             self.test_set = UCF_JHMDB_Dataset(
                 data_root=self.data_dir,
                 dataset=self.dataset,
-                split_path=self.split_file.get("test", None),
+                split_list=self.split_file.get("test", None),
                 img_size=self.img_size,
                 transform=self.tfms,
                 is_train=False,
