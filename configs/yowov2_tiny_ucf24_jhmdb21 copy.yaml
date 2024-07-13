@@ -99,7 +99,7 @@ model:
     max_iter: 500
     factor: 0.00066667
   trainable: false
-ckpt_path: /home/pep/Projects/DeepLearning/YOWOv2PL/checkpoints/last-e5.ckpt
+ckpt_path: null
 data:
   class_path: yowo.data.UCF24_JHMDB21_DataModule
   init_args:
