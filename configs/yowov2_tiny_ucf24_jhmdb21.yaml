@@ -64,7 +64,7 @@ model:
     loss_conf_weight: 1
     loss_cls_weight: 1
     loss_reg_weight: 5
-    focal_loss: false
+    focal_loss: true
   optimizer:
     class_path: torch.optim.AdamW
     init_args:
@@ -80,31 +80,37 @@ model:
       capturable: false
       differentiable: false
       fused: null
-  scheduler:
-    class_path: torch.optim.lr_scheduler.MultiStepLR
-    init_args:
-      milestones:
-      - 2
-      - 4
-      - 5
-      gamma: 0.1
-      last_epoch: -1
   scheduler_config:
+    scheduler:
+      class_path: torch.optim.lr_scheduler.MultiStepLR
+      init_args:
+        milestones:
+        - 2
+        - 4
+        - 5
+        gamma: 0.1
+        last_epoch: -1
     interval: epoch
+    frequency: 1
+  warmup_config:
+    scheduler:
+      class_path: yowo.schedulers.WarmupLRScheduler
+      init_args:
+        name: linear
+        max_iter: 500
+        factor: 0.00066667
+        last_epoch: -1
+    interval: step
     frequency: 1
   freeze_backbone_2d: true
   freeze_backbone_3d: true
-  warmup_config:
-    name: linear
-    max_iter: 500
-    factor: 0.00066667
-  trainable: false
+  trainable: true
 ckpt_path: null
 data:
   class_path: yowo.data.UCF24_JHMDB21_DataModule
   init_args:
-    dataset: ucf24
-    data_dir: /home/pep/Datasets/ucf24
+    dataset: "ucf24"
+    data_dir: null
     aug_params:
       jitter: 0.2
       hue: 0.1
@@ -118,4 +124,4 @@ data:
     img_size: 224
     len_clip: 16
     sampling_rate: 1
-    batch_size: 1
+    batch_size: 8
