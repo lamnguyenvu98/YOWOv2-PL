@@ -43,6 +43,8 @@ class YOWOv2Lightning(LightningModule):
         self.num_classes = model_config.num_classes
         self.model = YOWO(model_config)
         
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
         if freeze_backbone_2d:
             print('Freeze 2D Backbone ...')
             for m in self.model.backbone_2d.parameters():
@@ -164,7 +166,7 @@ class YOWOv2Lightning(LightningModule):
             result = self.test_metric.compute()
 
         metrics = {
-            k:v for k,v in result.items() if k in self.include_metric_res
+            k:v.to(self._device) for k,v in result.items() if k in self.include_metric_res
         }
         
         self.log_dict(
