@@ -5,7 +5,7 @@ from lightning.pytorch.utilities.types import (
 )
 from torch import device
 from torch._C import device
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 import os
 from typing import Callable, Iterable, Union, Literal, Optional, Any
 from dataclasses import dataclass
@@ -101,12 +101,12 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
                 sampling_rate=self.sampling_rate
             )
         
-        if stage == "test":
+        elif stage in ("validate", "test"):
             self.tfms = BaseTransform(
                 img_size=self.img_size
             )
 
-            self.test_set = UCF_JHMDB_Dataset(
+            all_set = UCF_JHMDB_Dataset(
                 data_root=self.data_dir,
                 dataset=self.dataset,
                 split_list=self.split_file.get("test", None),
@@ -115,6 +115,13 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
                 is_train=False,
                 len_clip=self.len_clip,
                 sampling_rate=self.sampling_rate 
+            )
+            
+            
+            
+            self.val_set, self.test_set = random_split(
+                dataset=all_set,
+                lengths=[0.3, 0.7]
             )
     
     def train_dataloader(self) -> TRAIN_DATALOADERS:
@@ -126,6 +133,17 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             pin_memory=True,
             drop_last=True,
             shuffle=True,
+        )
+    
+    def val_dataloader(self) -> EVAL_DATALOADERS:
+        return DataLoader(
+            dataset=self.val_set,
+            batch_size=self.batch_size,
+            collate_fn=self.collate_fn,
+            num_workers=self.num_workers,
+            pin_memory=True,
+            drop_last=False,
+            shuffle=False,
         )
     
     def test_dataloader(self) -> EVAL_DATALOADERS:
