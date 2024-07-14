@@ -58,6 +58,7 @@ model:
     multi_hot: false
     num_cls_heads: 2
     num_reg_heads: 2
+    use_aggregate_feat: false
   loss_config:
     topk_candicate: 10
     center_sampling_radius: 2.5
@@ -104,7 +105,21 @@ model:
     frequency: 1
   freeze_backbone_2d: true
   freeze_backbone_3d: true
-  trainable: true
+  metric_iou_thresholds:
+  - 0.25
+  - 0.5
+  - 0.75
+  - 0.95
+  metric_rec_thresholds:
+  - 0.1
+  - 0.3
+  - 0.5
+  - 0.7
+  - 0.9
+  metric_max_detection_thresholds:
+  - 1
+  - 2
+  - 3
 ckpt_path: null
 data:
   class_path: yowo.data.UCF24_JHMDB21_DataModule
