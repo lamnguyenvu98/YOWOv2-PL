@@ -110,7 +110,7 @@ class YOWOv2Lightning(LightningModule):
             logger=True,
             on_step=True,
             on_epoch=True,
-            sync_dist=self.trainer.num_devices > 1,
+            sync_dist=True,
             batch_size=batch_size
         )
         return total_loss
@@ -172,7 +172,7 @@ class YOWOv2Lightning(LightningModule):
             prog_bar=False, 
             logger=True, 
             on_epoch=True, 
-            sync_dist=self.trainer.num_devices > 1
+            sync_dist=True
         )
 
     def on_validation_epoch_end(self) -> None:
