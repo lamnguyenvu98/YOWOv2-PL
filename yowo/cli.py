@@ -2,6 +2,9 @@ from lightning.pytorch.cli import (
     LightningArgumentParser, 
     LightningCLI
 )
+from lightning.pytorch.demos.boring_classes import DemoModel
+from torch.optim.lr_scheduler import *
+from torch.optim import *
 
 from yowo.models import YOWOv2Lightning
 from yowo.data import *
@@ -30,17 +33,28 @@ default_scheduler = {
     },
 }
 
-default_scheduler_config = {
-    'interval': 'epoch',
-    'frequency': 1
+default_warmup = {
+    "class_path": "yowo.schedulers.WarmupLRScheduler",
+    "init_args": {
+        "name": "linear",
+        "max_iter": 500,
+        "factor": 0.00066667
+    }
 }
+
+# default_scheduler_config = {
+#     'scheduler': default_scheduler,
+#     'interval': 'epoch',
+#     'frequency': 1
+# }
 
 class YowoLightningCLI(LightningCLI):
     def add_arguments_to_parser(self, parser: LightningArgumentParser) -> None:
         parser.set_defaults({
             "model.optimizer": default_optimizer,
-            "model.scheduler": default_scheduler,
+            "model.scheduler_config.scheduler": default_scheduler,
         })
+        
         parser.link_arguments(
             source="data.img_size",
             target="model.model_config.img_size",

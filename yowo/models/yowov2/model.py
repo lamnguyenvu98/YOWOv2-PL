@@ -32,31 +32,28 @@ def aggregate_features(feat_2d: torch.Tensor, feat_3d: torch.Tensor):
 class YOWO(nn.Module):
     def __init__(
         self, 
-        params: ModelConfig,
-        use_aggregate_feat: bool = False,
-        trainable: bool = False
+        params: ModelConfig
     ):
         super(YOWO, self).__init__()
         self.stride = params.stride
         self.num_classes = params.num_classes
-        self.trainable = trainable
         self.conf_thresh = params.conf_thresh
         self.nms_thresh = params.nms_thresh
         self.topk = params.topk
         self.multi_hot = params.multi_hot
-        self.use_aggregate_feat = use_aggregate_feat
+        self.use_aggregate_feat = params.use_aggregate_feat
 
         # ------------------ Network ---------------------
         ## 2D backbone
         self.backbone_2d, bk_dim_2d = build_backbone_2d(
             model_name=params.backbone_2d,
-            pretrained=params.pretrained_2d and trainable
+            pretrained=params.pretrained_2d
         )
             
         ## 3D backbone
         self.backbone_3d, bk_dim_3d = build_backbone_3d(
             model_name=params.backbone_3d,
-            pretrained=params.pretrained_3d and trainable
+            pretrained=params.pretrained_3d
         )
 
         ## cls channel encoder

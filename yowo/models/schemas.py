@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Literal
-import torch
+from lightning.pytorch.cli import LRSchedulerCallable
 
 from .types import OPTIMIZER
 
@@ -21,11 +21,14 @@ class OptimizerParams:
     momentum: float = 0.9
 
 @dataclass
-class SchedulerParams:
-    lr_epoch: List[int]
-    lr_decay_ratio: float = 0.5
-    warmup: bool = True
-    warmup_iter: int = 500
+class LRSChedulerConfig:
+    """
+    interval ["step", "epoch"]: call step() after batch or epoch
+    frequency [int]: call step() every `frequency` 
+    """
+    scheduler: LRSchedulerCallable
+    interval: Literal["step", "epoch"] = "epoch"
+    frequency: int = 1
 
 @dataclass
 class WarmupLRConfig:
@@ -52,4 +55,4 @@ class ModelConfig:
     multi_hot: bool = False
     num_cls_heads: int = 2
     num_reg_heads: int = 2
-    
+    use_aggregate_feat: bool = False
