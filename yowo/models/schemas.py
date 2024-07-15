@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from typing import List, Literal
 from lightning.pytorch.cli import LRSchedulerCallable
 
-from .types import OPTIMIZER
-
 
 @dataclass
 class LossConfig:
@@ -13,14 +11,6 @@ class LossConfig:
     loss_cls_weight: float | int = 1
     loss_reg_weight: float | int = 5
     focal_loss: bool = False
-
-
-@dataclass
-class OptimizerParams:
-    optimizer_type: OPTIMIZER = "sgd"
-    base_lr: float = 0.001
-    weight_decay: float = 5e-4
-    momentum: float = 0.9
 
 
 @dataclass
