@@ -43,8 +43,7 @@ class YOWOv2Lightning(LightningModule):
         self.num_classes = model_config.num_classes
         self.model = YOWO(model_config)
         
-        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
+
         if freeze_backbone_2d:
             print('Freeze 2D Backbone ...')
             for m in self.model.backbone_2d.parameters():
@@ -85,6 +84,10 @@ class YOWOv2Lightning(LightningModule):
             max_detection_thresholds=metric_max_detection_thresholds,
             average="macro"
         )
+        
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._sync_dist_log = self.trainer.world_size > 1 or self.trainer.num_devices > 1
+        
 
     def forward(self, video_clip: torch.Tensor, infer_mode = True):
         return self.model.inference(video_clip) if infer_mode else self.model(video_clip)
@@ -166,15 +169,20 @@ class YOWOv2Lightning(LightningModule):
             result = self.test_metric.compute()
 
         metrics = {
-            k:v.to(self._device) for k,v in result.items() if k in self.include_metric_res
+            k:v for k,v in result.items() if k in self.include_metric_res
         }
+        
+        if self._sync_dist_log:
+            metrics = {
+                k: v.to(self._device) for k, v in metrics.items() if isinstance(v, torch.Tensor)
+            }
         
         self.log_dict(
             metrics, 
             prog_bar=False, 
             logger=True, 
             on_epoch=True, 
-            sync_dist=True
+            sync_dist=self._sync_dist_log
         )
 
     def on_validation_epoch_end(self) -> None:
