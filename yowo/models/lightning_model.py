@@ -86,7 +86,6 @@ class YOWOv2Lightning(LightningModule):
         )
         
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self._sync_dist_log = self.trainer.world_size > 1 or self.trainer.num_devices > 1
         
 
     def forward(self, video_clip: torch.Tensor, infer_mode = True):
@@ -108,6 +107,8 @@ class YOWOv2Lightning(LightningModule):
             "loss_cls": loss_dict["loss_cls"],
             "loss_box": loss_dict["loss_box"]
         }
+        
+        _sync_dist_log = self.trainer.world_size > 1 or self.trainer.num_devices > 1
             
         self.log_dict(
             dictionary=out_log, 
@@ -115,7 +116,7 @@ class YOWOv2Lightning(LightningModule):
             logger=True,
             on_step=True,
             on_epoch=True,
-            sync_dist=True,
+            sync_dist=_sync_dist_log,
             batch_size=batch_size
         )
         return total_loss
@@ -172,7 +173,8 @@ class YOWOv2Lightning(LightningModule):
             k:v for k,v in result.items() if k in self.include_metric_res
         }
         
-        if self._sync_dist_log:
+        _sync_dist_log = self.trainer.world_size > 1 or self.trainer.num_devices > 1
+        if _sync_dist_log:
             metrics = {
                 k: v.to(self._device) for k, v in metrics.items() if isinstance(v, torch.Tensor)
             }
@@ -182,7 +184,7 @@ class YOWOv2Lightning(LightningModule):
             prog_bar=False, 
             logger=True, 
             on_epoch=True, 
-            sync_dist=self._sync_dist_log
+            sync_dist=_sync_dist_log
         )
 
     def on_validation_epoch_end(self) -> None:
