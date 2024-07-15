@@ -34,6 +34,24 @@ class YOWOv2Lightning(LightningModule):
         metric_rec_thresholds: list[float] | None = [0.1, 0.3, 0.5, 0.7, 0.9],
         metric_max_detection_thresholds: list[int] | None = [1, 10, 100]
     ):
+        """
+        Initializes the YOWOv2Lightning model with the provided configurations.
+
+        Args:
+            model_config (ModelConfig): Configuration for the model.
+            loss_config (LossConfig): Configuration for the loss function.
+            optimizer (OptimizerCallable): The optimizer used for training.
+            scheduler_config (LRSChedulerConfig): Configuration for the learning rate scheduler.
+            warmup_config (LRSChedulerConfig | None): Configuration for the warmup scheduler if provided.
+            freeze_backbone_2d (bool): Whether to freeze the 2D backbone.
+            freeze_backbone_3d (bool): Whether to freeze the 3D backbone.
+            metric_iou_thresholds (list[float] | None): IoU thresholds for metrics.
+            metric_rec_thresholds (list[float] | None): Recall thresholds for Mean Average Recall.
+            metric_max_detection_thresholds (list[int] | None): Thresholds for maximum detections.
+
+        Returns:
+            None
+        """
         super().__init__()
         self.save_hyperparameters()
         self.optimizer = optimizer
