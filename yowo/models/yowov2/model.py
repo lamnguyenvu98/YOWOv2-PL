@@ -10,6 +10,7 @@ from .head import build_head
 from yowo.utils.nms import multiclass_nms_tensor
 from ..schemas import ModelConfig
 
+
 def aggregate_features(feat_2d: torch.Tensor, feat_3d: torch.Tensor):
     spatial_size_3d = feat_3d.size(-1)
     spatial_size_2d = feat_2d.size(-1)
@@ -21,17 +22,20 @@ def aggregate_features(feat_2d: torch.Tensor, feat_3d: torch.Tensor):
             dilation=1,
             stride=(kernel_size, kernel_size)
         )
-        out_feat_2d = out_feat_2d.view(feat_2d.size(0), feat_2d.size(1), -1, spatial_size_3d, spatial_size_3d)
+        out_feat_2d = out_feat_2d.view(feat_2d.size(0), feat_2d.size(
+            1), -1, spatial_size_3d, spatial_size_3d)
         out_feat_2d = torch.mean(out_feat_2d, dim=2)
     else:
         out_feat_2d = feat_2d
-    
+
     return out_feat_2d
 
 # You Only Watch Once
+
+
 class YOWO(nn.Module):
     def __init__(
-        self, 
+        self,
         params: ModelConfig
     ):
         super(YOWO, self).__init__()
@@ -44,39 +48,39 @@ class YOWO(nn.Module):
         self.use_aggregate_feat = params.use_aggregate_feat
 
         # ------------------ Network ---------------------
-        ## 2D backbone
+        # 2D backbone
         self.backbone_2d, bk_dim_2d = build_backbone_2d(
             model_name=params.backbone_2d,
             pretrained=params.pretrained_2d
         )
-            
-        ## 3D backbone
+
+        # 3D backbone
         self.backbone_3d, bk_dim_3d = build_backbone_3d(
             model_name=params.backbone_3d,
             pretrained=params.pretrained_3d
         )
 
-        ## cls channel encoder
+        # cls channel encoder
         self.cls_channel_encoders = nn.ModuleList(
             [build_channel_encoder(
                 head_act=params.head_act,
                 head_norm=params.head_norm,
-                in_dim=bk_dim_2d[i] + bk_dim_3d, 
-                out_dim=params.head_dim
-            ) for i in range(len(params.stride))
-            ])
-            
-        ## reg channel & spatial encoder
-        self.reg_channel_encoders = nn.ModuleList(
-            [build_channel_encoder(
-                head_act=params.head_act,
-                head_norm=params.head_norm,
-                in_dim=bk_dim_2d[i] + bk_dim_3d, 
+                in_dim=bk_dim_2d[i] + bk_dim_3d,
                 out_dim=params.head_dim
             ) for i in range(len(params.stride))
             ])
 
-        ## head
+        # reg channel & spatial encoder
+        self.reg_channel_encoders = nn.ModuleList(
+            [build_channel_encoder(
+                head_act=params.head_act,
+                head_norm=params.head_norm,
+                in_dim=bk_dim_2d[i] + bk_dim_3d,
+                out_dim=params.head_dim
+            ) for i in range(len(params.stride))
+            ])
+
+        # head
         self.heads = nn.ModuleList(
             [build_head(
                 num_cls_heads=params.num_cls_heads,
@@ -86,34 +90,36 @@ class YOWO(nn.Module):
                 head_dim=params.head_dim,
                 head_depthwise=params.head_depthwise
             ) for _ in range(len(params.stride))]
-        ) 
+        )
 
-        ## pred
+        # pred
         head_dim = params.head_dim
         self.conf_preds = nn.ModuleList(
-            [nn.Conv2d(head_dim, 1, kernel_size=1)
+            modules=[
+                nn.Conv2d(head_dim, 1, kernel_size=1)
                 for _ in range(len(params.stride))
-                ]) 
+            ])
         self.cls_preds = nn.ModuleList(
-            [nn.Conv2d(head_dim, self.num_classes, kernel_size=1)
+            modules=[
+                nn.Conv2d(head_dim, self.num_classes, kernel_size=1)
                 for _ in range(len(params.stride))
-                ]) 
+            ])
         self.reg_preds = nn.ModuleList(
-            [nn.Conv2d(head_dim, 4, kernel_size=1) 
+            modules=[
+                nn.Conv2d(head_dim, 4, kernel_size=1)
                 for _ in range(len(params.stride))
-                ])                 
+            ])
 
         # init yowo
         self.init_yowo()
 
-
-    def init_yowo(self): 
+    def init_yowo(self):
         # Init yolo
         for m in self.modules():
             if isinstance(m, nn.BatchNorm2d):
                 m.eps = 1e-3
                 m.momentum = 0.03
-                
+
         # Init bias
         init_prob = 0.01
         bias_value = -torch.log(torch.tensor((1. - init_prob) / init_prob))
@@ -128,22 +134,22 @@ class YOWO(nn.Module):
             b.data.fill_(bias_value.item())
             cls_pred.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
 
-
     def generate_anchors(self, fmp_size, stride, device):
         """
             fmp_size: (List) [H, W]
         """
         # generate grid cells
         fmp_h, fmp_w = fmp_size
-        anchor_y, anchor_x = torch.meshgrid([torch.arange(fmp_h), torch.arange(fmp_w)], indexing='ij')
+        anchor_y, anchor_x = torch.meshgrid(
+            [torch.arange(fmp_h), torch.arange(fmp_w)], indexing='ij')
         # [H, W, 2] -> [HW, 2]
-        anchor_xy = torch.stack([anchor_x, anchor_y], dim=-1).float().view(-1, 2) + 0.5
+        anchor_xy = torch.stack([anchor_x, anchor_y],
+                                dim=-1).float().view(-1, 2) + 0.5
         anchor_xy *= stride
         anchors = anchor_xy.to(device)
         # anchors = anchor_xy
 
         return anchors
-        
 
     def decode_boxes(self, anchors, pred_reg, stride):
         """
@@ -161,7 +167,6 @@ class YOWO(nn.Module):
 
         return pred_box
 
-
     def post_process_one_hot(self, conf_preds, cls_preds, reg_preds, anchors) -> tuple[torch.Tensor]:
         """
         Input:
@@ -169,14 +174,15 @@ class YOWO(nn.Module):
             cls_preds: (Tensor) [H x W, C]
             reg_preds: (Tensor) [H x W, 4]
         """
-        
+
         all_scores = []
         all_labels = []
         all_bboxes = []
-        
+
         for level, (conf_pred_i, cls_pred_i, reg_pred_i, anchors_i) in enumerate(zip(conf_preds, cls_preds, reg_preds, anchors)):
             # (H x W x C,)
-            scores_i = (torch.sqrt(conf_pred_i.sigmoid() * cls_pred_i.sigmoid())).flatten()
+            scores_i = (torch.sqrt(conf_pred_i.sigmoid()
+                        * cls_pred_i.sigmoid())).flatten()
 
             # Keep top k top scoring indices only.
             num_topk = min(self.topk, reg_pred_i.size(0))
@@ -191,14 +197,16 @@ class YOWO(nn.Module):
             scores = topk_scores[keep_idxs]
             topk_idxs = topk_idxs[keep_idxs]
 
-            anchor_idxs = torch.div(topk_idxs, self.num_classes, rounding_mode='floor')
+            anchor_idxs = torch.div(
+                topk_idxs, self.num_classes, rounding_mode='floor')
             labels = topk_idxs % self.num_classes
 
             reg_pred_i = reg_pred_i[anchor_idxs]
             anchors_i = anchors_i[anchor_idxs]
 
             # decode box: [M, 4]
-            bboxes = self.decode_boxes(anchors_i, reg_pred_i, self.stride[level])
+            bboxes = self.decode_boxes(
+                anchors_i, reg_pred_i, self.stride[level])
 
             all_scores.append(scores)
             all_labels.append(labels)
@@ -218,22 +226,22 @@ class YOWO(nn.Module):
             scores, labels, bboxes, self.nms_thresh, self.num_classes, False)
 
         return scores, labels, bboxes
-    
 
     def post_process_multi_hot(self, conf_preds, cls_preds, reg_preds, anchors) -> tuple[torch.Tensor]:
         """
         Input:
             cls_pred: (Tensor) [H x W, C]
             reg_pred: (Tensor) [H x W, 4]
-        """        
+        """
         all_conf_preds = []
         all_cls_preds = []
         all_box_preds = []
         for level, (conf_pred_i, cls_pred_i, reg_pred_i, anchors_i) in enumerate(zip(conf_preds, cls_preds, reg_preds, anchors)):
             # decode box
-            box_pred_i = self.decode_boxes(anchors_i, reg_pred_i, self.stride[level])
-            
-            # conf pred 
+            box_pred_i = self.decode_boxes(
+                anchors_i, reg_pred_i, self.stride[level])
+
+            # conf pred
             conf_pred_i = torch.sigmoid(conf_pred_i.squeeze(-1))   # [M,]
 
             # cls_pred
@@ -276,13 +284,12 @@ class YOWO(nn.Module):
             num_classes=self.num_classes,
             class_agnostic=True
         )
-        
+
         # [M, 5 + C]
         # out_boxes = np.concatenate([bboxes, scores[..., None], labels], axis=-1)
         out_boxes = torch.cat([bboxes, scores.unsqueeze(-1), labels], dim=-1)
 
         return out_boxes
-    
 
     @torch.no_grad()
     def inference(self, video_clips: torch.Tensor) -> tuple[list[torch.Tensor]]:
@@ -316,19 +323,26 @@ class YOWO(nn.Module):
                     feat_2d=reg_feat,
                     feat_3d=feat_3d
                 )
-                
-                cls_feat = self.cls_channel_encoders[level](cls_feat_2d_unfold, feat_3d)
-                reg_feat = self.reg_channel_encoders[level](reg_feat_2d_unfold, feat_3d)
-                
-                cls_feat = F.interpolate(cls_feat, scale_factor=2 ** (2 - level))
-                reg_feat = F.interpolate(reg_feat, scale_factor=2 ** (2 - level))
+
+                cls_feat = self.cls_channel_encoders[level](
+                    cls_feat_2d_unfold, feat_3d)
+                reg_feat = self.reg_channel_encoders[level](
+                    reg_feat_2d_unfold, feat_3d)
+
+                cls_feat = F.interpolate(
+                    cls_feat, scale_factor=2 ** (2 - level))
+                reg_feat = F.interpolate(
+                    reg_feat, scale_factor=2 ** (2 - level))
             else:
                 # upsample
-                feat_3d_up = F.interpolate(feat_3d, scale_factor=2 ** (2 - level))
+                feat_3d_up = F.interpolate(
+                    feat_3d, scale_factor=2 ** (2 - level))
 
                 # encoder
-                cls_feat = self.cls_channel_encoders[level](cls_feat, feat_3d_up)
-                reg_feat = self.reg_channel_encoders[level](reg_feat, feat_3d_up)
+                cls_feat = self.cls_channel_encoders[level](
+                    cls_feat, feat_3d_up)
+                reg_feat = self.reg_channel_encoders[level](
+                    reg_feat, feat_3d_up)
 
             # head
             cls_feat, reg_feat = self.heads[level](cls_feat, reg_feat)
@@ -337,21 +351,24 @@ class YOWO(nn.Module):
             conf_pred: torch.Tensor = self.conf_preds[level](reg_feat)
             cls_pred: torch.Tensor = self.cls_preds[level](cls_feat)
             reg_pred: torch.Tensor = self.reg_preds[level](reg_feat)
-        
+
             # generate anchors
             fmp_size = conf_pred.shape[-2:]
-            anchors = self.generate_anchors(fmp_size, self.stride[level], conf_pred.device)
+            anchors = self.generate_anchors(
+                fmp_size, self.stride[level], conf_pred.device)
 
             # [B, C, H, W] -> [B, H, W, C] -> [B, M, C], M = HW
-            conf_pred = conf_pred.permute(0, 2, 3, 1).contiguous().view(B, -1, 1)
-            cls_pred = cls_pred.permute(0, 2, 3, 1).contiguous().view(B, -1, self.num_classes)
+            conf_pred = conf_pred.permute(
+                0, 2, 3, 1).contiguous().view(B, -1, 1)
+            cls_pred = cls_pred.permute(
+                0, 2, 3, 1).contiguous().view(B, -1, self.num_classes)
             reg_pred = reg_pred.permute(0, 2, 3, 1).contiguous().view(B, -1, 4)
 
             all_conf_preds.append(conf_pred)
             all_cls_preds.append(cls_pred)
             all_reg_preds.append(reg_pred)
             all_anchors.append(anchors)
-        
+
         # batch process
         if self.multi_hot:
             batch_bboxes = []
@@ -406,7 +423,6 @@ class YOWO(nn.Module):
 
             return batch_scores, batch_labels, batch_bboxes
 
-
     def forward(self, video_clips: torch.Tensor) -> dict[str, torch.Tensor]:
         """
         Input:
@@ -419,7 +435,7 @@ class YOWO(nn.Module):
                 'anchors':   (Tensor) [M, 2]
                 'stride':    (Int)
             }
-        """                      
+        """
         # if not self.trainable:
         #     return self.inference(video_clips)
 
@@ -446,19 +462,26 @@ class YOWO(nn.Module):
                     feat_2d=reg_feat,
                     feat_3d=feat_3d
                 )
-                
-                cls_feat = self.cls_channel_encoders[level](cls_feat_2d_unfold, feat_3d)
-                reg_feat = self.reg_channel_encoders[level](reg_feat_2d_unfold, feat_3d)
-                
-                cls_feat = F.interpolate(cls_feat, scale_factor=2 ** (2 - level))
-                reg_feat = F.interpolate(reg_feat, scale_factor=2 ** (2 - level))
+
+                cls_feat = self.cls_channel_encoders[level](
+                    cls_feat_2d_unfold, feat_3d)
+                reg_feat = self.reg_channel_encoders[level](
+                    reg_feat_2d_unfold, feat_3d)
+
+                cls_feat = F.interpolate(
+                    cls_feat, scale_factor=2 ** (2 - level))
+                reg_feat = F.interpolate(
+                    reg_feat, scale_factor=2 ** (2 - level))
             else:
                 # upsample
-                feat_3d_up = F.interpolate(feat_3d, scale_factor=2 ** (2 - level))
+                feat_3d_up = F.interpolate(
+                    feat_3d, scale_factor=2 ** (2 - level))
 
                 # encoder
-                cls_feat = self.cls_channel_encoders[level](cls_feat, feat_3d_up)
-                reg_feat = self.reg_channel_encoders[level](reg_feat, feat_3d_up)
+                cls_feat = self.cls_channel_encoders[level](
+                    cls_feat, feat_3d_up)
+                reg_feat = self.reg_channel_encoders[level](
+                    reg_feat, feat_3d_up)
 
             # head
             cls_feat, reg_feat = self.heads[level](cls_feat, reg_feat)
@@ -467,13 +490,15 @@ class YOWO(nn.Module):
             conf_pred: torch.Tensor = self.conf_preds[level](reg_feat)
             cls_pred: torch.Tensor = self.cls_preds[level](cls_feat)
             reg_pred: torch.Tensor = self.reg_preds[level](reg_feat)
-    
+
             # generate anchors
             fmp_size = conf_pred.shape[-2:]
-            anchors = self.generate_anchors(fmp_size, self.stride[level], conf_pred.device)
+            anchors = self.generate_anchors(
+                fmp_size, self.stride[level], conf_pred.device)
 
             # [B, C, H, W] -> [B, H, W, C] -> [B, M, C]
-            conf_pred = conf_pred.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
+            conf_pred = conf_pred.permute(
+                0, 2, 3, 1).contiguous().flatten(1, 2)
             cls_pred = cls_pred.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
             reg_pred = reg_pred.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
 
@@ -484,7 +509,7 @@ class YOWO(nn.Module):
             all_cls_preds.append(cls_pred)
             all_box_preds.append(box_pred)
             all_anchors.append(anchors)
-        
+
         # output dict
         outputs = {
             "pred_conf": all_conf_preds,       # List(Tensor) [B, M, 1]
@@ -492,6 +517,6 @@ class YOWO(nn.Module):
             "pred_box": all_box_preds,         # List(Tensor) [B, M, 4]
             "anchors": all_anchors,            # List(Tensor) [B, M, 2]
             "strides": self.stride             # List(Int)
-        }            
+        }
 
         return outputs

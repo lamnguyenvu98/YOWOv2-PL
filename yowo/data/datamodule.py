@@ -1,6 +1,6 @@
 from lightning.pytorch import LightningDataModule
 from lightning.pytorch.utilities.types import (
-    TRAIN_DATALOADERS, 
+    TRAIN_DATALOADERS,
     EVAL_DATALOADERS
 )
 from torch import device
@@ -11,17 +11,19 @@ from typing import Callable, Iterable, Union, Literal, Optional, Any
 from dataclasses import dataclass
 
 from .dataset.ava import AVA_Dataset
-from .dataset.ucf_jhmdb import UCF_JHMDB_Dataset, UCF_JHMDB_VIDEO_Dataset
+from .dataset.ucf_jhmdb import UCF_JHMDB_Dataset
 from .dataset.transforms import Augmentation, BaseTransform
 from .utils import collate_fn
 from yowo.utils.validate import validate_literal_types
 
-@dataclass
+
+@dataclass(frozen=True)
 class AugmentationParams:
     jitter: float = 0.2
     hue: float = 0.1
     saturation: float = 1.5
     exposure: float = 1.5
+
 
 DEFAULT_SPLIT_FILE = dict(
     train="trainlist.txt",
@@ -30,9 +32,10 @@ DEFAULT_SPLIT_FILE = dict(
 
 DATASET = Literal['ucf24', 'jhmdb21']
 
+
 class UCF24_JHMDB21_DataModule(LightningDataModule):
     def __init__(
-        self, 
+        self,
         dataset: DATASET,
         data_dir: str,
         aug_params: AugmentationParams,
@@ -70,7 +73,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
         self.sampling_rate = sampling_rate
         self.batch_size = batch_size
         self.collate_fn = collate_fn
-    
+
     def prepare_data(self) -> None:
         validate_literal_types(self.dataset, DATASET)
         if not os.path.exists(self.data_dir):
@@ -81,7 +84,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
     def setup(self, stage: Literal['fit', 'validate', 'test', 'predict']) -> None:
         if self.collate_fn is None:
             self.collate_fn = collate_fn
-        
+
         if stage in ("fit", "validate"):
             self.tfms = Augmentation(
                 img_size=self.img_size,
@@ -100,7 +103,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
                 len_clip=self.len_clip,
                 sampling_rate=self.sampling_rate
             )
-            
+
             self.val_set, self.train_set = random_split(
                 dataset=allset,
                 lengths=[0.3, 0.7]
@@ -119,9 +122,9 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
                 transform=self.tfms,
                 is_train=False,
                 len_clip=self.len_clip,
-                sampling_rate=self.sampling_rate 
+                sampling_rate=self.sampling_rate
             )
-    
+
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         return DataLoader(
             dataset=self.train_set,
@@ -132,7 +135,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             drop_last=True,
             shuffle=True,
         )
-    
+
     def val_dataloader(self) -> EVAL_DATALOADERS:
         return DataLoader(
             dataset=self.val_set,
@@ -143,7 +146,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             drop_last=False,
             shuffle=False,
         )
-    
+
     def test_dataloader(self) -> EVAL_DATALOADERS:
         return DataLoader(
             dataset=self.test_set,
@@ -154,9 +157,10 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
             drop_last=False,
             shuffle=False,
         )
-    
+
     def transfer_batch_to_device(self, batch: TRAIN_DATALOADERS, device: device, dataloader_idx: int) -> TRAIN_DATALOADERS:
         return super().transfer_batch_to_device(batch, device, dataloader_idx)
+
 
 class AVADataModule(LightningDataModule):
     def __init__(
@@ -168,7 +172,6 @@ class AVADataModule(LightningDataModule):
         annotation_dir: str = 'annotation_dir',
         labelmap_file: str = 'labelmap_file',
         batch_size: int = 8,
-        # transform: Optional[dict] = None,
         collate_fn: Optional[Any] = None,
         gt_box_list: Optional[str] = None,
         exclusion_file: Optional[str] = None,
@@ -191,10 +194,10 @@ class AVADataModule(LightningDataModule):
         # self.transform = transform
         self.len_clip = len_clip
         self.sampling_rate = sampling_rate
-    
+
     def prepare_data(self) -> None:
         return super().prepare_data()
-    
+
     def setup(self, stage: str) -> None:
         if stage == "fit":
             self.tfms = Augmentation(
@@ -204,7 +207,7 @@ class AVADataModule(LightningDataModule):
                 saturation=self.aug_params.saturation,
                 exposure=self.aug_params.exposure
             )
-        
+
             self.train_set = AVA_Dataset(
                 data_root=self.data_root,
                 gt_box_list=self.gt_box_list,
@@ -219,12 +222,12 @@ class AVADataModule(LightningDataModule):
                 len_clip=self.len_clip,
                 sampling_rate=self.sampling_rate
             )
-    
+
         if stage == "test":
             self.tfms = BaseTransform(
                 img_size=self.img_size
             )
-    
+
             self.test_set = AVA_Dataset(
                 data_root=self.data_root,
                 gt_box_list=self.gt_box_list,
@@ -239,7 +242,7 @@ class AVADataModule(LightningDataModule):
                 len_clip=self.len_clip,
                 sampling_rate=self.sampling_rate
             )
-    
+
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         return DataLoader(
             dataset=self.train_set,
@@ -248,7 +251,7 @@ class AVADataModule(LightningDataModule):
             pin_memory=True,
             drop_last=True
         )
-    
+
     def test_dataloader(self) -> EVAL_DATALOADERS:
         return DataLoader(
             dataset=self.train_set,

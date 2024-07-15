@@ -4,6 +4,7 @@ from lightning.pytorch.cli import LRSchedulerCallable
 
 from .types import OPTIMIZER
 
+
 @dataclass
 class LossConfig:
     topk_candicate: int = 10
@@ -13,12 +14,14 @@ class LossConfig:
     loss_reg_weight: float | int = 5
     focal_loss: bool = False
 
+
 @dataclass
 class OptimizerParams:
     optimizer_type: OPTIMIZER = "sgd"
     base_lr: float = 0.001
     weight_decay: float = 5e-4
     momentum: float = 0.9
+
 
 @dataclass
 class LRSChedulerConfig:
@@ -30,11 +33,13 @@ class LRSChedulerConfig:
     interval: Literal["step", "epoch"] = "epoch"
     frequency: int = 1
 
+
 @dataclass
 class WarmupLRConfig:
     name: Literal["linear", "exp"] = "linear"
     max_iter: int = 500
     factor: float = 0.00066667
+
 
 @dataclass
 class ModelConfig:
