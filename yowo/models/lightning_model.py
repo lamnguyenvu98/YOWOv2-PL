@@ -13,11 +13,8 @@ from .yowov2.loss import build_criterion
 from .schemas import (
     LossConfig,
     ModelConfig,
-    LRSChedulerConfig,
-    WarmupLRConfig
+    LRSChedulerConfig
 )
-
-DEFAULT_WARMUP = WarmupLRConfig()
 
 
 class YOWOv2Lightning(LightningModule):
@@ -153,7 +150,7 @@ class YOWOv2Lightning(LightningModule):
         gts = list(map(
             lambda x: {
                 "boxes": rescale_bboxes_tensor(
-                    x["boxes"],
+                    bboxes=x["boxes"],
                     dest_width=x["orig_size"][0],
                     dest_height=x["orig_size"][1]
                 ),
@@ -167,7 +164,7 @@ class YOWOv2Lightning(LightningModule):
         for idx, (scores, labels, bboxes) in enumerate(zip(batch_scores, batch_labels, batch_bboxes)):
             pred = {
                 "boxes": rescale_bboxes_tensor(
-                    bboxes,
+                    bboxes=bboxes,
                     dest_width=batch_target[idx]["orig_size"][0],
                     dest_height=batch_target[idx]["orig_size"][1]
                 ),
