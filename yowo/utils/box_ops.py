@@ -38,9 +38,9 @@ def get_ious(
         * (bboxes2[..., 3] - bboxes2[..., 1]).clamp_(min=0)
 
     w_intersect = (torch.min(bboxes1[..., 2], bboxes2[..., 2])
-                - torch.max(bboxes1[..., 0], bboxes2[..., 0])).clamp_(min=0)
+                   - torch.max(bboxes1[..., 0], bboxes2[..., 0])).clamp_(min=0)
     h_intersect = (torch.min(bboxes1[..., 3], bboxes2[..., 3])
-                - torch.max(bboxes1[..., 1], bboxes2[..., 1])).clamp_(min=0)
+                   - torch.max(bboxes1[..., 1], bboxes2[..., 1])).clamp_(min=0)
 
     area_intersect = w_intersect * h_intersect
     area_union = bboxes2_area + bboxes1_area - area_intersect
@@ -81,22 +81,25 @@ def rescale_bboxes(bboxes: np.ndarray, orig_size: Tuple[int]):
     orig_w, orig_h = orig_size[0], orig_size[1]
     bboxes[..., [0, 2]] = np.clip(
         bboxes[..., [0, 2]] * orig_w, a_min=0., a_max=orig_w
-        )
+    )
     bboxes[..., [1, 3]] = np.clip(
         bboxes[..., [1, 3]] * orig_h, a_min=0., a_max=orig_h
-        )
-    
+    )
+
     return bboxes
 
+
 def rescale_bboxes_tensor(bboxes: torch.Tensor, dest_width: int, dest_height: int):
-    bboxes[..., [0, 2]] = torch.clamp(
-        bboxes[..., [0, 2]] * dest_width, min=0., max=dest_width
-        )
-    bboxes[..., [1, 3]] = torch.clamp(
-        bboxes[..., [1, 3]] * dest_height, min=0., max=dest_height
-        )
-    
-    return bboxes
+    out_boxes = torch.clone(bboxes).to(bboxes.device)
+    out_boxes[..., [0, 2]] = torch.clamp(
+        out_boxes[..., [0, 2]] * dest_width, min=0., max=dest_width
+    )
+    out_boxes[..., [1, 3]] = torch.clamp(
+        out_boxes[..., [1, 3]] * dest_height, min=0., max=dest_height
+    )
+
+    return out_boxes
+
 
 if __name__ == '__main__':
     box1 = torch.tensor([[10, 10, 20, 20]])
