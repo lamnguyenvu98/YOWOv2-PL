@@ -223,7 +223,13 @@ class YOWO(nn.Module):
 
         # nms
         scores, labels, bboxes = multiclass_nms_tensor(
-            scores, labels, bboxes, self.nms_thresh, self.num_classes, False)
+            scores=scores,
+            labels=labels,
+            bboxes=bboxes,
+            nms_thresh=self.nms_thresh,
+            num_classes=self.num_classes,
+            class_agnostic=False
+        )
 
         return scores, labels, bboxes
 
