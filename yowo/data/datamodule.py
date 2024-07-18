@@ -106,7 +106,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
 
             self.val_set, self.train_set = random_split(
                 dataset=allset,
-                lengths=[0.3, 0.7]
+                lengths=[0.2, 0.8]
             )
 
         if stage == "test":
