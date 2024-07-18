@@ -51,3 +51,4 @@ class ModelConfig:
     num_cls_heads: int = 2
     num_reg_heads: int = 2
     use_aggregate_feat: bool = False
+    use_blurpool: bool = False

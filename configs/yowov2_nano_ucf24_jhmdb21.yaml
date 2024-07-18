@@ -59,6 +59,7 @@ model:
     num_cls_heads: 2
     num_reg_heads: 2
     use_aggregate_feat: false
+    use_blurpool: false
   loss_config:
     topk_candicate: 10
     center_sampling_radius: 2.5

@@ -51,7 +51,8 @@ class YOWO(nn.Module):
         # 2D backbone
         self.backbone_2d, bk_dim_2d = build_backbone_2d(
             model_name=params.backbone_2d,
-            pretrained=params.pretrained_2d
+            pretrained=params.pretrained_2d,
+            use_blurpool=params.use_blurpool
         )
 
         # 3D backbone
