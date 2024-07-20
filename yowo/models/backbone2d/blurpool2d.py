@@ -199,8 +199,8 @@ class BlurMaxPool2d(nn.Module):
         self.padding = padding
         self.dilation = dilation
         self.ceil_mode = ceil_mode
-        self.blur_filter = create_blur_filter_2d(filter_size)
-        # self.register_buffer('blur_filter', create_blur_filter_2d(filter_size))
+        blur_filter = create_blur_filter_2d(filter_size)
+        self.register_buffer('blur_filter', blur_filter)
 
     def forward(self, x: torch.Tensor):
         return blur_max_pool2d(
@@ -281,15 +281,17 @@ class BlurConv2d(nn.Module):
         self.weight = self.conv.weight
 
         self.conv._already_blur_pooled = True
-        self.blur_filter = create_blur_filter_2d(
-            filter_size).to(self.conv.weight.device)
-        # self.register_buffer("blur_filter_conv", create_blur_filter_2d(filter_size))
+        blur_filter_conv = create_blur_filter_2d(filter_size)
+        self.register_buffer(
+            "blur_filter_conv",
+            blur_filter_conv
+        )
 
     def forward(self, x: torch.Tensor):
         if self.blur_first:
             blurred = blur_2d(
                 x,
-                blur_filter=self.blur_filter,
+                blur_filter=self.blur_filter_conv,
                 channels=self.blur_channels,
                 stride=self.blur_stride
             )
@@ -299,7 +301,7 @@ class BlurConv2d(nn.Module):
             return blur_2d(
                 activations,
                 channels=self.blur_channels,
-                blur_filter=self.blur_filter,
+                blur_filter=self.blur_filter_conv,
                 stride=self.blur_stride
             )
 
