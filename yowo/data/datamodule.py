@@ -7,7 +7,7 @@ from torch import device
 from torch._C import device
 from torch.utils.data import DataLoader, random_split
 import os
-from typing import Callable, Iterable, Union, Literal, Optional, Any
+from typing import Callable, Iterable, Union, Literal, Optional, Any, Dict
 from dataclasses import dataclass
 
 from .dataset.ava import AVA_Dataset
@@ -32,6 +32,12 @@ DEFAULT_SPLIT_FILE = dict(
 
 DATASET = Literal['ucf24', 'jhmdb21']
 
+BATCH_SIZE_SETTING = {
+    "train": 64,
+    "val": 32,
+    "test": 64
+}
+
 
 class UCF24_JHMDB21_DataModule(LightningDataModule):
     def __init__(
@@ -45,7 +51,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
         img_size: int = 224,
         len_clip: int = 16,
         sampling_rate: int = 1,
-        batch_size: int = 8,
+        batch_size: Dict[str, int] = BATCH_SIZE_SETTING,
     ):
         """Lightning Data Module for UCF24 and JHMDB21 dataset
 
@@ -128,7 +134,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         return DataLoader(
             dataset=self.train_set,
-            batch_size=self.batch_size,
+            batch_size=self.batch_size.get("train", 64),
             collate_fn=self.collate_fn,
             num_workers=self.num_workers,
             pin_memory=True,
@@ -139,7 +145,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
     def val_dataloader(self) -> EVAL_DATALOADERS:
         return DataLoader(
             dataset=self.val_set,
-            batch_size=self.batch_size,
+            batch_size=self.batch_size.get("val", 32),
             collate_fn=self.collate_fn,
             num_workers=self.num_workers,
             pin_memory=True,
@@ -150,7 +156,7 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
     def test_dataloader(self) -> EVAL_DATALOADERS:
         return DataLoader(
             dataset=self.test_set,
-            batch_size=self.batch_size,
+            batch_size=self.batch_size.get("test", 64),
             collate_fn=self.collate_fn,
             num_workers=self.num_workers,
             pin_memory=True,
