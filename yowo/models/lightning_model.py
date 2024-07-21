@@ -181,8 +181,10 @@ class YOWOv2Lightning(LightningModule):
     def eval_epoch(self, mode: Literal["val", "test"]):
         if mode == "val":
             result = self.val_metric.compute()
+            self.val_metric.reset()
         else:
             result = self.test_metric.compute()
+            self.test_metric.reset()
 
         metrics = {
             k: v for k, v in result.items() if k in self.include_metric_res
@@ -196,7 +198,7 @@ class YOWOv2Lightning(LightningModule):
             }
 
         self.log_dict(
-            metrics,
+            dictionary=metrics,
             prog_bar=False,
             logger=True,
             on_epoch=True,
