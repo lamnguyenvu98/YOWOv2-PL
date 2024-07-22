@@ -90,15 +90,16 @@ def rescale_bboxes(bboxes: np.ndarray, orig_size: Tuple[int]):
 
 
 def rescale_bboxes_tensor(bboxes: torch.Tensor, dest_width: int, dest_height: int):
-    out_boxes = torch.clone(bboxes).to(bboxes.device)
-    out_boxes[..., [0, 2]] = torch.clamp(
-        out_boxes[..., [0, 2]] * dest_width, min=0., max=dest_width
+    # out_boxes = bboxes.detach().clone().to(bboxes.device)
+    bboxes = bboxes.detach()
+    bboxes[..., [0, 2]] = torch.clamp(
+        bboxes[..., [0, 2]] * dest_width, min=0., max=dest_width
     )
-    out_boxes[..., [1, 3]] = torch.clamp(
-        out_boxes[..., [1, 3]] * dest_height, min=0., max=dest_height
+    bboxes[..., [1, 3]] = torch.clamp(
+        bboxes[..., [1, 3]] * dest_height, min=0., max=dest_height
     )
 
-    return out_boxes
+    return bboxes
 
 
 if __name__ == '__main__':
