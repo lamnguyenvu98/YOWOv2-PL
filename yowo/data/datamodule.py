@@ -91,45 +91,43 @@ class UCF24_JHMDB21_DataModule(LightningDataModule):
         if self.collate_fn is None:
             self.collate_fn = collate_fn
 
-        if stage in ("fit", "validate"):
-            self.tfms = Augmentation(
-                img_size=self.img_size,
-                jitter=self.aug_params.jitter,
-                hue=self.aug_params.hue,
-                saturation=self.aug_params.saturation,
-                exposure=self.aug_params.exposure
-            )
-            allset = UCF_JHMDB_Dataset(
-                data_root=self.data_dir,
-                dataset=self.dataset,
-                split_list=self.split_file.get("train", None),
-                img_size=self.img_size,
-                transform=self.tfms,
-                is_train=True,
-                len_clip=self.len_clip,
-                sampling_rate=self.sampling_rate
-            )
+        self.train_tfms = Augmentation(
+            img_size=self.img_size,
+            jitter=self.aug_params.jitter,
+            hue=self.aug_params.hue,
+            saturation=self.aug_params.saturation,
+            exposure=self.aug_params.exposure
+        )
+        self.train_set = UCF_JHMDB_Dataset(
+            data_root=self.data_dir,
+            dataset=self.dataset,
+            split_list=self.split_file.get("train", None),
+            img_size=self.img_size,
+            transform=self.train_tfms,
+            is_train=True,
+            len_clip=self.len_clip,
+            sampling_rate=self.sampling_rate
+        )
 
-            self.val_set, self.train_set = random_split(
-                dataset=allset,
-                lengths=[0.2, 0.8]
-            )
+        self.val_test_tfms = BaseTransform(
+            img_size=self.img_size
+        )
 
-        if stage == "test":
-            self.tfms = BaseTransform(
-                img_size=self.img_size
-            )
+        allset = UCF_JHMDB_Dataset(
+            data_root=self.data_dir,
+            dataset=self.dataset,
+            split_list=self.split_file.get("test", None),
+            img_size=self.img_size,
+            transform=self.val_test_tfms,
+            is_train=False,
+            len_clip=self.len_clip,
+            sampling_rate=self.sampling_rate
+        )
 
-            self.test_set = UCF_JHMDB_Dataset(
-                data_root=self.data_dir,
-                dataset=self.dataset,
-                split_list=self.split_file.get("test", None),
-                img_size=self.img_size,
-                transform=self.tfms,
-                is_train=False,
-                len_clip=self.len_clip,
-                sampling_rate=self.sampling_rate
-            )
+        self.val_set, self.test_set = random_split(
+            dataset=allset,
+            lengths=[0.3, 0.7]
+        )
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         return DataLoader(
