@@ -134,3 +134,15 @@ labels/Basketball/v_Basketball_g08_c01/00072.txt
 labels/Basketball/v_Basketball_g08_c01/00073.txt
 ```
 `testlist.txt` is the same as `trainlist.txt`
+
+
+## References
+
+```
+@article{yang2023yowov2,
+  title={YOWOv2: A Stronger yet Efficient Multi-level Detection Framework for Real-time Spatio-temporal Action Detection},
+  author={Yang, Jianhua and Kun, Dai},
+  journal={arXiv preprint arXiv:2302.06848},
+  year={2023}
+}
+```
